@@ -60,8 +60,22 @@ type state = unit (* You should change this definition *)
 (*  Get a trace of Vroomba from a string  *)
 (*  A string can be ill-formed! *)
 let string_to_solution (s: string) : move list option = 
-  error "Implement me!"
-
+  let len = String.length s in
+  let res = ref [] in
+  try (for i = 0 to len - 1 do
+         let move = 
+           match s.[i] with
+           | 'W' -> Up
+           | 'A' -> Left
+           | 'S' -> Down
+           | 'D' -> Right
+           | _ -> error "Unrecognizable move!" in
+         res := move :: !res
+       done;
+       Some !res)
+  with error ->
+    None
+      
 (*  Check that the sequence of moves is valid  *)
 let check_solution (r: room) (moves: move list) : bool = 
   error "Implement me!"

@@ -41,7 +41,12 @@ let string_to_polygon (s : string) : polygon option =
 
 (*  Read all polygons from a file  *)
 let file_to_polygons (path: string) : polygon list =
-  error "Implement me"
+  let ls = ReadingFiles.read_file_to_strings path in
+  let res = ref [] in
+  List.iter (fun e -> let poly = (string_to_polygon e) in
+              if poly = None then ()
+              else res := (get_exn poly) :: !res) ls;
+  !res
 
 let polygon_to_string (p: polygon) : string = 
   error "Implement me"
