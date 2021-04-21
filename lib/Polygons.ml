@@ -300,7 +300,7 @@ let choose_ray_angle pol =
     edges pol |>
     List.map (fun (Point (x1, y1), Point (x2, y2)) -> 
         let dx = x2 -. x1 in
-        let dy = y1 -. y1 in 
+        let dy = y2 -. y1 in 
         atan2 dy dx) in
   let n = List.length pol in
   let candidate_angles = 
