@@ -37,7 +37,9 @@ include Polygons
 (* TODO: Implement more functions! *)
 
 let write_solution_to_file (moves : move list) (path : string) : unit = 
-  error "Implement me!"
+  let buffer = Buffer.create 1 in
+  List.iter (fun e -> Buffer.add_string buffer (pp_move e)) moves;
+  ReadingFiles.write_string_to_file path (Buffer.contents buffer)
 
 (* TODO: feel free to modify this function to add more parameters
    necessary for tracking your game state *)

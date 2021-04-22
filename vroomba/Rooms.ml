@@ -32,22 +32,48 @@ open Polygons
 
 (* TODO: provide your implementation of internal room data type *)
 (* It should describe the room conveniently for solving. *)
-type room = unit
+type pos =
+  | Edge
+  | Inner
+  | Outer
+
+type room = {
+  map : (pos array) array;
+  edges : (int * int) list ref
+}
+
+let mk_room size =
+  let map = Array.make size [||] in
+  for i = 0 to size - 1 do
+    map.(i) <- Array.make size Outer
+  done;
+  map.(0).(0) <- Edge;
+  { map = map;
+    edges = ref [(0, 0)]
+  }
 
 (*  Read a polygon from a string of coordinates as in resources/basic.txt  *)
 (*  A string can be ill-formed! *)
 let string_to_polygon (s : string) : polygon option = 
   error "Implement me"
+(* see trimmer for ideas? *)
 
 (*  Read all polygons from a file  *)
 let file_to_polygons (path: string) : polygon list =
-  error "Implement me"
+  let ls = ReadingFiles.read_file_to_strings path in
+  let res = ref [] in
+  List.iter (fun e -> let poly = (string_to_polygon e) in
+              if poly = None then ()
+              else res := (get_exn poly) :: !res) ls;
+  !res
 
 let polygon_to_string (p: polygon) : string = 
   error "Implement me"
 
 let write_polygons_to_file (ps: polygon list) (path: string) : unit =
-  error "Implement me"
+  let res = ref [] in
+  List.iter (fun p -> res := (polygon_to_string p) :: !res) ps;
+  ReadingFiles.write_strings_to_file path (List.rev !res)
 
 (*********************************************)
 (*           Rooms and polygons              *)
