@@ -38,6 +38,7 @@ type room = unit
 (*  A string can be ill-formed! *)
 let string_to_polygon (s : string) : polygon option = 
   error "Implement me"
+(* see trimmer for ideas? *)
 
 (*  Read all polygons from a file  *)
 let file_to_polygons (path: string) : polygon list =
@@ -52,7 +53,9 @@ let polygon_to_string (p: polygon) : string =
   error "Implement me"
 
 let write_polygons_to_file (ps: polygon list) (path: string) : unit =
-  error "Implement me"
+  let res = ref [] in
+  List.iter (fun p -> res := (polygon_to_string p) :: !res) ps;
+  ReadingFiles.write_strings_to_file path (List.rev !res)
 
 (*********************************************)
 (*           Rooms and polygons              *)

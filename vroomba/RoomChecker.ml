@@ -72,7 +72,7 @@ let string_to_solution (s: string) : move list option =
            | _ -> error "Unrecognizable move!" in
          res := move :: !res
        done;
-       Some !res)
+       Some (List.rev !res))
   with error ->
     None
       
