@@ -32,14 +32,24 @@ open Polygons
 
 (* TODO: provide your implementation of internal room data type *)
 (* It should describe the room conveniently for solving. *)
-type shape =
+type pos =
   | Edge
   | Inner
   | Outer
 
 type room = {
-  map : shape array array;
-  edges : (int * int) list
+  map : (pos array) array;
+  edges : (int * int) list ref
+}
+
+let mk_room size =
+  let map = Array.make size [||] in
+  for i = 0 to size - 1 do
+    map.(i) <- Array.make size Outer
+  done;
+  map.(0).(0) <- Edge;
+  { map = map;
+    edges = ref [(0, 0)]
   }
 
 (*  Read a polygon from a string of coordinates as in resources/basic.txt  *)
