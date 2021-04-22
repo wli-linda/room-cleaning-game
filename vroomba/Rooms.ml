@@ -32,7 +32,15 @@ open Polygons
 
 (* TODO: provide your implementation of internal room data type *)
 (* It should describe the room conveniently for solving. *)
-type room = unit
+type shape =
+  | Edge
+  | Inner
+  | Outer
+
+type room = {
+  map : shape array array;
+  edges : (int * int) list
+  }
 
 (*  Read a polygon from a string of coordinates as in resources/basic.txt  *)
 (*  A string can be ill-formed! *)
