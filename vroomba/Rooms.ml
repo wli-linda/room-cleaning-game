@@ -54,9 +54,42 @@ let mk_room size =
 
 (*  Read a polygon from a string of coordinates as in resources/basic.txt  *)
 (*  A string can be ill-formed! *)
-let string_to_polygon (s : string) : polygon option = 
-  error "Implement me"
-(* see trimmer for ideas? *)
+let string_to_polygon (s : string) : polygon option =
+  let extract_number string =
+    let len = String.length string in
+    let int_offset = int_of_char '0' in
+    let is_neg = ref false in
+    let num = ref 0 in
+    for i = 1 to len - 1 do
+      let ch = string.[i] in
+      if i = 1 && ch = '(' then ()
+      else if (i = 1 && ch = '-') ||
+              (i = 2 && ch = '-' && string.[1] = '(')
+      then is_neg := true
+      else if int_of_char ch >= int_offset &&
+              int_of_char ch <= int_offset + 9
+      then num := !num * 10 + ((int_of_char ch) - int_offset)
+      else if i = len - 1 && ch = ')' then ()
+      else error "Unrecognizable index!"
+    done;
+    if !is_neg
+    then 0 - !num
+    else !num
+  in  
+  let res = ref [] in
+  let coords = String.split_on_char ';' s in
+  try (
+    List.map (fun e -> String.split_on_char ',' e) coords |>
+    List.iter (fun ls ->
+        if List.length ls = 2
+        then begin
+          let x = extract_number @@ List.hd ls in
+          let y = extract_number @@ List.nth ls 1 in
+          res := (x, y) :: !res
+        end
+        else error "Ill-formed string!");
+    Some (polygon_of_int_pairs (List.rev !res)))
+  with error -> None
 
 (*  Read all polygons from a file  *)
 let file_to_polygons (path: string) : polygon list =
