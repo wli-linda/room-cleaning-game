@@ -69,7 +69,9 @@ let string_to_polygon (s : string) : polygon option =
       else if int_of_char ch >= int_offset &&
               int_of_char ch <= int_offset + 9
       then num := !num * 10 + ((int_of_char ch) - int_offset)
-      else if i = len - 1 && ch = ')' then ()
+      else if i = len - 1 && ch = ')' then () (* I realize now that I can just
+                                               * use string_of_int here instead
+                                               * but for another day I guess *)
       else error "Unrecognizable index!"
     done;
     if !is_neg
@@ -100,8 +102,17 @@ let file_to_polygons (path: string) : polygon list =
               else res := (get_exn poly) :: !res) ls;
   !res
 
-let polygon_to_string (p: polygon) : string = 
-  error "Implement me"
+let polygon_to_string (p: polygon) : string =
+  let buffer = Buffer.create 1 in
+  List.iter (fun e ->
+      let x = get_x e in
+      let y = get_y e in
+      let x_str = string_of_int (int_of_float x) in
+      let y_str = string_of_int (int_of_float y) in
+      let coord = String.concat "" ["("; x_str; ", "; y_str; "); "] in
+      Buffer.add_string buffer coord) p;
+  let s = Buffer.contents buffer in
+  String.sub s 0 (String.length s - 2)
 
 let write_polygons_to_file (ps: polygon list) (path: string) : unit =
   let res = ref [] in
