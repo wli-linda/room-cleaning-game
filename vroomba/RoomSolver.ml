@@ -28,6 +28,10 @@ open Rooms
 open RoomChecker
 open RoomGenerator
 
+open Graphs
+open LinkedGraphs
+open NodeTable
+
 (*********************************************)
 (*              Room solver                  *)
 (*********************************************)
@@ -37,9 +41,28 @@ open RoomGenerator
    structures and algorithms from the lectures (see folder `lib` of
    this project). *)
 
+type room_graph = {
+  graph : (int * int, int) graph;
+  table : (int * int) hash_table (* Alternatively, new graph struct? 
+                                  * Want hashtable for easy access to 
+                                  * movable coordinates, since node_id
+                                  * doesn't provide much info *)
+}
+
+type color = White | Black (* for moving places? *)
+
 (* Solve the room and produce the list of moves. *)
 (* Make use of RoomChecker.state state type internally in your solver *)
-let solve_room (r: room) : move list = 
+let solve_room (r: room) : move list =
+  (* TODO: CREATING A GRAPH
+   * find all coordinates in the room the vroomba can move to,
+   * add nodes for all these coordinates, along with edge label of 1
+   * create edges for all possible moves, found with hash_table *)
+
+
+  (* TODO: DFS & BACKTRACKING *)
+
+  
   error "Implement me!"
 
 (*********************************************)
