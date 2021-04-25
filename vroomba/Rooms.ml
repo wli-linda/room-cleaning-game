@@ -122,13 +122,49 @@ let write_polygons_to_file (ps: polygon list) (path: string) : unit =
 (*********************************************)
 (*           Rooms and polygons              *)
 (*********************************************)
-  
+
+let fill_edges map ls =
+  let fill_edge x1 y1 x2 y2 =
+    if not (x1 = 0 && y1 = 0 && x2 = 0 && y2 = 0) &&
+       abs (x1 - x2) = 0 && abs (y1 - y2) = 0
+    then error "Invalid room!"
+    else if abs (x1 - x2) > 0
+    then (if x1 > x2
+          then (for i = 1 to (x1 - x2 - 1) do
+                  map.(x2 + i).(y1) <- Edge
+                done)
+          else (for i = 1 to (x2 - x1 - 1) do
+                  map.(x1 + i).(y1) <- Edge
+                done))
+    else if abs (y1 - y2) > 0
+    then (if y1 > y2
+          then (for i = 1 to (y1 - y2 - 1) do
+                  map.(x1).(y2 + i) <- Edge
+                done)
+          else (for i = 1 to (y2 - y1 - 1) do
+                  map.(x1).(y1 + i) <- Edge
+                done))
+  in
+  let rec walk ls a =
+    let (x1, y1) = a in
+    map.(x1).(y1) <- Edge;
+    match ls with
+    | [] ->
+      fill_edge x1 y1 0 0
+    | (x2, y2) :: tl ->
+      fill_edge x1 y1 x2 y2;
+      walk tl (x2, y2)
+  in walk ls (0, 0)
+
+let fill_room map =
+  error "impl"
+
 (*  Convert a polygon to a room data type  *)
 let polygon_to_room (p: polygon) : room = 
   error "Implement me"
 
 (*  Convert a room to a list of polygon coordinates  *)
 let room_to_polygon (r: room) : polygon = 
-  error "Implement me"
+  polygon_of_int_pairs !(r.edges)
 
 

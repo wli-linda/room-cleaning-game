@@ -42,6 +42,8 @@ let generate_random_room (size : int) : room =
    obstacles, there is a place for initial Vroomba position, etc). *)
 let valid_room (r: room) : bool = 
   error "Implement me"
+(* Linda: also check that the room edges only change either x or y? 
+ * It's okay if this function's implementation-sepcific, I assume *)
 
 (*********************************************)
 (*                     Tests                 *)
