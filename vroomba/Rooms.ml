@@ -157,11 +157,49 @@ let fill_edges map ls =
   in walk ls (0, 0)
 
 let fill_room map =
-  error "impl"
+  let len = Array.length map in
+  let fill_space x y =
+    let backtrack k' =
+      for i = 0 to k' - 1 do
+        map.(x + i).(y) <- Outer
+      done
+    in
+    let k = ref 1 in
+    while x + !k < len - 1 && not (map.(x + !k).(y) = Edge) do
+      if x + !k = len - 2 && not (map.(len - 1).(y) = Edge)
+      then (backtrack !k; k := len)
+      else (map.(x + !k).(y) <- Inner; k := !k + 1)
+    done;
+    x + !k
+  in
+  for j = 0 to len - 1 do
+    let i = ref 0 in
+    while !i < len - 2 do
+      if map.(!i).(j) = Edge && not (map.(!i + 1).(j) = Edge)
+      then i := 1 + fill_space !i j
+      else i := !i + 1
+    done
+  done
 
 (*  Convert a polygon to a room data type  *)
-let polygon_to_room (p: polygon) : room = 
-  error "Implement me"
+let polygon_to_room (p: polygon) : room =
+  (* TODO: get float list that starts from (0, 0) *)
+  
+  
+  (* create room based on list *)
+  let size = ref 0 in
+  let ls = ref [] in
+  List.iter (fun e ->
+      let x = int_of_float @@ get_x e in
+      let y = int_of_float @@ get_y e in
+      if x > !size then size := x
+      else if y > !size then size := y;
+      ls := (x, y) :: !ls) p;
+  let r = mk_room !size in
+  r.edges := (List.rev !ls);
+  fill_edges r.map !(r.edges);
+  fill_room r.map;
+  r
 
 (*  Convert a room to a list of polygon coordinates  *)
 let room_to_polygon (r: room) : polygon = 
