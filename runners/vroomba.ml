@@ -51,9 +51,29 @@ let () =
       (* TODO: Implement exception handling if there is no such file *)
       let input_file = Sys.argv.(2) in
       let output_file = Sys.argv.(3) in
-      render_games input_file output_file                
+      try (render_games input_file output_file) (* alt: find path? *)
+      with Failure _ -> error "No such file exists!"
     else begin  
-        (* TODO: Implement other commands *)
-        vroom_vroom (); 
-        print_endline "Please, Implement other commands!"
-      end
+      if command = "generate"
+      then
+        let num = Sys.argv.(2) in
+        let size = Sys.argv.(3) in
+        let output_file = Sys.argv.(4) in
+        let ls = ref [] in
+        for i = 1 to (int_of_string num) do
+          let r = RoomGenerator.generate_random_room (int_of_string size) in
+          let p = room_to_polygon r in
+          ls := p :: !ls
+        done;
+        write_polygons_to_file !ls output_file
+      else if command = "check"
+      then
+        let input_file = Sys.argv.(2) in
+        let output_file = Sys.argv.(3) in
+        error "impl"
+      else if command = "solve"
+      then
+        let input_file = Sys.argv.(2) in
+        let output_file = Sys.argv.(3) in
+        error "impl"
+    end
