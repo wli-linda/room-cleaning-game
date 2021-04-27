@@ -100,7 +100,7 @@ let file_to_polygons (path: string) : polygon list =
   List.iter (fun e -> let poly = (string_to_polygon e) in
               if poly = None then ()
               else res := (get_exn poly) :: !res) ls;
-  !res
+  List.rev !res
 
 let polygon_to_string (p: polygon) : string =
   let buffer = Buffer.create 1 in
@@ -160,7 +160,7 @@ let fill_room map =
   let len = Array.length map in
   let fill_space x y =
     let backtrack k' =
-      for i = 0 to k' - 1 do
+      for i = 1 to k' - 1 do
         map.(x + i).(y) <- Outer
       done
     in
@@ -169,6 +169,9 @@ let fill_room map =
       if x + !k = len - 2 && not (map.(len - 1).(y) = Edge)
       then (backtrack !k; k := len)
       else (map.(x + !k).(y) <- Inner; k := !k + 1)
+    done;
+    while x + !k < len - 1 && map.(x + !k).(y) = Edge do
+      k := !k + 1
     done;
     x + !k
   in
@@ -195,7 +198,7 @@ let polygon_to_room (p: polygon) : room =
       if x > !size then size := x
       else if y > !size then size := y;
       ls := (x, y) :: !ls) p;
-  let r = mk_room !size in
+  let r = mk_room (!size + 1) in
   r.edges := (List.rev !ls);
   fill_edges r.map !(r.edges);
   fill_room r.map;
