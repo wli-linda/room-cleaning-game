@@ -34,6 +34,8 @@ open Rooms
 (*  Example generate_random_room 4 should return a room that fits into a
     4x4 square. *)
 
+(*RUI: The idea is to generate a valid polygon, 
+and use polygon_to_room to convert it to room*)
 let generate_random_room (size : int) : room = 
   error "Implement me"
 

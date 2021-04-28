@@ -25,6 +25,7 @@ SOFTWARE.
 
 open ArrayUtil
 open Polygons
+open Util
 
 (*********************************************)
 (*         Representation of Rooms           *)
@@ -100,7 +101,7 @@ let file_to_polygons (path: string) : polygon list =
   List.iter (fun e -> let poly = (string_to_polygon e) in
               if poly = None then ()
               else res := (get_exn poly) :: !res) ls;
-  !res
+  List.rev !res
 
 let polygon_to_string (p: polygon) : string =
   let buffer = Buffer.create 1 in
@@ -184,6 +185,7 @@ let fill_room map =
 (*  Convert a polygon to a room data type  *)
 let polygon_to_room (p: polygon) : room =
   (* TODO: get float list that starts from (0, 0) *)
+  (* In case polygons don't start with (0,0) *)
   
   
   (* create room based on list *)
@@ -195,7 +197,7 @@ let polygon_to_room (p: polygon) : room =
       if x > !size then size := x
       else if y > !size then size := y;
       ls := (x, y) :: !ls) p;
-  let r = mk_room !size in
+  let r = mk_room (!size + 1) in
   r.edges := (List.rev !ls);
   fill_edges r.map !(r.edges);
   fill_room r.map;
@@ -206,3 +208,24 @@ let room_to_polygon (r: room) : polygon =
   polygon_of_int_pairs !(r.edges)
 
 
+(*test*)
+
+
+let%test "test_file_to_polygon&write_polygons_to_file" = 
+  let input  = find_file "../../../resources/rooms.txt" in
+  let output = "test.tmp" in
+  let string = ReadingFiles.read_file_to_strings input in 
+  let polygon_list = file_to_polygons input in
+  write_polygons_to_file polygon_list output;
+  let string' = ReadingFiles.read_file_to_strings output in
+  Sys.remove output;
+  string = string'
+
+let%test "test_polygon_to_room&room_to_polygon" = 
+  let input  = find_file "../../../resources/basic.txt" in
+  let polygon_list = file_to_polygons input in
+  List.for_all (fun p -> 
+                    let room = polygon_to_room p in 
+                    let p' = room_to_polygon room in 
+                    p = p') 
+  polygon_list
