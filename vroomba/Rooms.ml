@@ -53,6 +53,7 @@ let mk_room size =
     edges = ref [(0, 0)]
   }
 
+
 (*  Read a polygon from a string of coordinates as in resources/basic.txt  *)
 (*  A string can be ill-formed! *)
 let string_to_polygon (s : string) : polygon option =
