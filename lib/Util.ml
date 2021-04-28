@@ -73,6 +73,3 @@ let time f x =
   let fx = f x in
   Printf.printf "Execution elapsed time: %f sec\n" (Sys.time () -. t);
   fx
-
-let find_file fname = 
-  Printf.sprintf "%s/%s" (Sys.getcwd ()) fname

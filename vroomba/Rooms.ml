@@ -216,7 +216,7 @@ let room_to_polygon (r: room) : polygon =
 
 
 let%test "test_file_to_polygon&write_polygons_to_file" = 
-  let input  = find_file "../../../resources/rooms.txt" in
+  let input  = BinaryEncodings.find_file "../../../resources/rooms.txt" in
   let output = "test.tmp" in
   let string = ReadingFiles.read_file_to_strings input in 
   let polygon_list = file_to_polygons input in
@@ -226,7 +226,7 @@ let%test "test_file_to_polygon&write_polygons_to_file" =
   string = string'
 
 let%test "test_polygon_to_room&room_to_polygon" = 
-  let input  = find_file "../../../resources/basic.txt" in
+  let input  = BinaryEncodings.find_file "../../../resources/basic.txt" in
   let polygon_list = file_to_polygons input in
   List.for_all (fun p -> 
                     let room = polygon_to_room p in 

@@ -193,7 +193,7 @@ let%test "Generated room is valid" =
 
 (* TODO: add more tests *)
 let%test "test_valid_room_simple" = 
-  let input  = find_file "../../../resources/basic.txt" in
+  let input  = BinaryEncodings.find_file "../../../resources/basic.txt" in
   let polygon_list = file_to_polygons input in
   List.for_all (fun p -> 
                     let room = polygon_to_room p in  
@@ -201,15 +201,10 @@ let%test "test_valid_room_simple" =
   polygon_list
 
 let%test "test_valid_room_simple_negative" = 
-  let input  = find_file "../../../resources/invalid.txt" in
+  let input  = BinaryEncodings.find_file "../../../resources/invalid.txt" in
   let polygon_list = file_to_polygons input in
   List.for_all (fun p -> 
                     print_endline "\n\nCHECKING POLYGON\n";
                     let room = polygon_to_room p in  
                     not (valid_room room)) 
   polygon_list;;
-
-  let input  = find_file "resources/invalid.txt" in
-  let polygon_list = file_to_polygons input in
-  let p = List.hd polygon_list in
-  let room = polygon_to_room p in  room;;
