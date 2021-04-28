@@ -26,6 +26,7 @@ SOFTWARE.
 open Util
 open Rooms
 open Polygons
+open ArrayUtil
 
 (*********************************************)
 (*       Automated generation of rooms       *)
@@ -81,8 +82,31 @@ let polygon_to_int_pairs polygon =
             polygon;
   List.rev !int_pairs
 
+
+
+(* find the direction from point 1 to point 2*)
+type direction = 
+  |Up
+  |Down
+  |Left
+  |Right
+  |Diagonal
+  |Stop
+
+let find_direction p1 p2 = 
+  let (x1, y1) = p1
+  and (x2, y2) = p2 in 
+  let (h, v) = ((x2 - x1), (y2 - y1)) in 
+  if h = 0 
+  then (if v = 0 then Stop else (if v>0 then Up else Down))
+  else 
+    (if h >0 
+    then (if v = 0 then Right else (if v>0 then Diagonal else Diagonal))
+    else (if v = 0 then Left else (if v>0 then Diagonal else Diagonal) ))
+  
 let valid_room (r: room) : bool = 
   let size = Array.length r.map in
+  let len = List.length !(r.edges) in
   let polygon = room_to_polygon r in 
   let int_pairs = polygon_to_int_pairs polygon in
   let sort_by_x = 
@@ -120,17 +144,41 @@ let valid_room (r: room) : bool =
                   then 
                       (*points in polygon must not map to Outer*)
                       (if get_pos r coor = Outer 
-                      then let (x,y) = coor in Printf.printf "Wrong: (%d, %d) is Outer\n" x y ;false 
+                      then false 
                       else true)
                   else
                       (*points ouside polygon must map to Outer*)
                       (if get_pos r coor = Outer
-                      then true
-                      else let (x,y) = coor in Printf.printf "Wrong (%d, %d) is not Outer\n" x y; false)
+                      then true 
+                      else false)
                   )
                   !all_points
-  
-  in no_lacunas
+  in
+    let no_straight_line = 
+      if len <= 3 then false
+      else
+      begin
+        let res = ref true in
+        let arr = list_to_array int_pairs in 
+        for i = 0 to len - 3 do 
+          let d1 = find_direction arr.(i) arr.(i + 1)
+          and d2 = find_direction arr.(i + 1) arr.(i + 2) in
+          if d1 = d2 then res := false
+          ;if not (!res) then let (x,y) = arr.(i) in Printf.printf "Found straight line (%d,%d)\n" x y
+        done;
+        (*check the last two + first point*)
+        print_endline "Check last points";
+        let d1 = find_direction arr.(len - 2) arr.(len - 1)
+        and d2 = find_direction arr.(len - 1) arr.(0) in
+        if d1 = d2 then res := false ;
+        !res
+      end
+
+  in no_lacunas && no_straight_line;;
+
+
+
+
 
 
 (*********************************************)
@@ -152,10 +200,16 @@ let%test "test_valid_room_simple" =
                     valid_room room) 
   polygon_list
 
-(* let%test "test_valid_room_simple_negative" = 
+let%test "test_valid_room_simple_negative" = 
   let input  = find_file "../../../resources/invalid.txt" in
   let polygon_list = file_to_polygons input in
   List.for_all (fun p -> 
+                    print_endline "\n\nCHECKING POLYGON\n";
                     let room = polygon_to_room p in  
-                    valid_room room) 
-  polygon_list *)
+                    not (valid_room room)) 
+  polygon_list;;
+
+  let input  = find_file "resources/invalid.txt" in
+  let polygon_list = file_to_polygons input in
+  let p = List.hd polygon_list in
+  let room = polygon_to_room p in  room;;

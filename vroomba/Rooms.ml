@@ -162,7 +162,7 @@ let fill_room map =
   let len = Array.length map in
   let fill_space x y =
     let backtrack k' =
-      for i = 0 to k' - 1 do
+      for i = 1 to k' - 1 do
         map.(x + i).(y) <- Outer
       done
     in
@@ -171,6 +171,9 @@ let fill_room map =
       if x + !k = len - 2 && not (map.(len - 1).(y) = Edge)
       then (backtrack !k; k := len)
       else (map.(x + !k).(y) <- Inner; k := !k + 1)
+    done;
+    while x + !k < len - 1 && map.(x + !k).(y) = Edge do
+      k := !k + 1
     done;
     x + !k
   in
