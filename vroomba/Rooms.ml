@@ -127,8 +127,7 @@ let write_polygons_to_file (ps: polygon list) (path: string) : unit =
 
 let fill_edges map ls =
   let fill_edge x1 y1 x2 y2 =
-    if not (x1 = 0 && y1 = 0 && x2 = 0 && y2 = 0) &&
-       abs (x1 - x2) = 0 && abs (y1 - y2) = 0
+    if abs (x1 - x2) > 0 && abs (y1 - y2) > 0
     then error "Invalid room!"
     else if abs (x1 - x2) > 0
     then (if x1 > x2
@@ -147,16 +146,19 @@ let fill_edges map ls =
                   map.(x1).(y1 + i) <- Edge
                 done))
   in
+  let hd_init = List.hd ls in
+  let tl_init = List.tl ls in
   let rec walk ls a =
     let (x1, y1) = a in
     map.(x1).(y1) <- Edge;
     match ls with
     | [] ->
-      fill_edge x1 y1 0 0
+      let (x2, y2) = hd_init in
+      fill_edge x1 y1 x2 y2
     | (x2, y2) :: tl ->
       fill_edge x1 y1 x2 y2;
       walk tl (x2, y2)
-  in walk ls (0, 0)
+  in walk tl_init hd_init
 
 let fill_room map =
   let len = Array.length map in
