@@ -165,7 +165,9 @@ let generate_random_room (size : int) : room =
 
   let move_in_quadrant init_coor prev_dir quad corner_list = 
     let boundaries = get_boundaries quad size in 
+
     let generic_move allowed_directions random coor prev_dir corner_list =
+
       let allowed_moves = get_allowed_moves coor boundaries in 
       let dir = let i = Random.int(random) in allowed_directions.(i) in
       let d = match dir with 
@@ -179,13 +181,14 @@ let generate_random_room (size : int) : room =
       Printf.printf "Pick direction %s\n" d;      
       let max_moves = get_max_steps_in_direction allowed_moves dir in
       Printf.printf "Max move is %d\n" max_moves;      
-      let steps = if max_moves = 0 then 0 else Random.int (max_moves + 1)in 
+      let steps = if max_moves = 0 then 0 else (Random.int (max_moves) +1) in 
       Printf.printf "Take %d steps\n" steps;
       let new_coor = take_steps_in_dir coor steps dir in
+      let (x,y) = coor in Printf.printf "Curr coor (%d, %d )\n" x y;  
       let (x,y) = new_coor in Printf.printf "New coor (%d, %d )\n" x y;      
       let new_corner_list = 
-          if dir != prev_dir
-          then new_coor :: corner_list
+          if (dir != prev_dir) && steps > 0
+          then coor :: corner_list
           else corner_list
       in let dir' = if steps = 0 then prev_dir else dir
       in (new_coor, dir', new_corner_list)
@@ -206,7 +209,7 @@ let generate_random_room (size : int) : room =
                           | Down -> d!= Up
                           | _ -> true) 
             allowed_dir_ls) in
-        generic_move allowed_dir 2 init_coor prev_dir corner_list
+        generic_move allowed_dir 2 coor prev_dir corner_list
     in
       let rec make_following_moves coor prev_dir corner_list stop =
         if stop 
