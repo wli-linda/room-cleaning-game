@@ -49,17 +49,27 @@ let generate_random_room (size : int) : room =
  * It's okay if this function's implementation-sepcific, I assume *)
 
 (*RUI: A few checks:
-1. No lacunas: O(n^2)
-  Convert room to polygon -> every point in polygon must match the room's pos E or I 
-2. No obstacles: O(n^2)
-  Every vertical or horizontal line in the n x n square must have 0 or even number of 
-  intersects with the room polygon or is collinear to the edge.
+1. No lacunas: 
+  In our implementation, drawing a lacuna will end up with edges extending out from 
+  existing edges that not adjacent to it. So here we just need to check if edge intersect
+  with another edge that is not adjacent to it
+2. No obstacles : O(n^2)
+  Same as above
+
 3. Initial place for Vroomba: O(1)
-  (0,0) must have pos = E
-  (1,1) must not be O
-4. Consecutive edges only run horiontally or vertically:  O(n)
+  (0,0) must not be Outer
+  (1,1) must not be Outer
+4. No diagonal edges: 
+  Consecutive edges only run horiontally or vertically
   only change in x or y coordinate
-5. No points repeat O(n)
+  *this will throw error in polygon_to_room
+6. No straight lines :
+  3 consecutive edges on the same line are not allowed
+7. No collinear edges:
+  Check for non-collinearity while checking #1
+8. No "8" shaped rooms:
+  same checks as #1
+   
 *)
 
 
@@ -94,8 +104,8 @@ type direction =
   |Stop
 
 let find_direction p1 p2 = 
-  let (x1, y1) = p1
-  and (x2, y2) = p2 in 
+  let (x1, y1) = point_to_coor p1
+  and (x2, y2) = point_to_coor p2 in 
   let (h, v) = ((x2 - x1), (y2 - y1)) in 
   if h = 0 
   then (if v = 0 then Stop else (if v>0 then Up else Down))
@@ -103,79 +113,105 @@ let find_direction p1 p2 =
     (if h >0 
     then (if v = 0 then Right else (if v>0 then Diagonal else Diagonal))
     else (if v = 0 then Left else (if v>0 then Diagonal else Diagonal) ))
-  
+
+let print_segment s = 
+  let p1, p2 = s in 
+  let (x1, y1) = point_to_coor p1 in 
+  let (x2, y2) = point_to_coor p2 in 
+  Printf.printf "segment (%d, %d), (%d, %d)\n" x1 y1 x2 y2 
+
+
+let print_segment_list l = 
+  List.iter (fun s -> print_segment s) l
+
+let on_straight_line s1 s2= 
+    let (p1, p2) = s1
+    and (p3, p4) = s2 in
+    let d1 = find_direction p2 p1
+    and d2 = find_direction p4 p3 in
+    d1 = d2
+
+
 let valid_room (r: room) : bool = 
-  let size = Array.length r.map in
-  let len = List.length !(r.edges) in
   let polygon = room_to_polygon r in 
-  let int_pairs = polygon_to_int_pairs polygon in
-  let sort_by_x = 
-      List.sort (fun (a,b) (c,d) ->
-      if a > c then 1
-      else (if a < c then -1 else 0)) 
-      int_pairs
-  in
-    let sort_by_y = 
-        List.sort (fun (a,b) (c,d) ->
-        if b > d then 1
-        else (if b < d then -1 else 0)) 
-        int_pairs
-  in
-    let x_min = fst (List.hd sort_by_x) in
-    let x_max = x_min + size - 1 in
-    let y_min = fst (List.hd sort_by_y) in
-    let y_max = y_min + size - 1
-  in 
+  let len = List.length !(r.edges) in
+  if len <= 3 then false 
+  else
+  begin
 
-  (*get all the points of the rectangle that the room fits in *)
-    let all_points = ref [] in
-  for x = x_min to x_max do
-      for y = y_min to y_max do 
-        all_points := (x,y) :: !all_points
-      done;
-  done;
+  (*get edge list in Point pairs *)
+  let edge_list = Polygons.edges polygon in
+  let edge_arr = list_to_array edge_list in
 
-  (* check for lacunas *)
-  let no_lacunas = 
-    List.for_all (fun coor -> 
-                  if 
-                      (let p = coor_to_point coor in
-                      point_within_polygon polygon p)
-                  then 
-                      (*points in polygon must not map to Outer*)
-                      (if get_pos r coor = Outer 
-                      then false 
-                      else true)
-                  else
-                      (*points ouside polygon must map to Outer*)
-                      (if get_pos r coor = Outer
-                      then true 
-                      else false)
-                  )
-                  !all_points
-  in
-    let no_straight_line = 
-      if len <= 3 then false
-      else
+  let no_intersect_or_collinear = 
+    let res = ref true in 
+
+    let i = ref 0 in 
+    while !res && !i < len - 1 do
+      let s1 = edge_arr.(!i) in 
+
+      (* s1 vs all segments behind it excluding the next neighbor *)
       begin
-        let res = ref true in
-        let arr = list_to_array int_pairs in 
-        for i = 0 to len - 3 do 
-          let d1 = find_direction arr.(i) arr.(i + 1)
-          and d2 = find_direction arr.(i + 1) arr.(i + 2) in
-          if d1 = d2 then res := false
-          ;if not (!res) then let (x,y) = arr.(i) in Printf.printf "Found straight line (%d,%d)\n" x y
-        done;
-        (*check the last two + first point*)
-        print_endline "Check last points";
-        let d1 = find_direction arr.(len - 2) arr.(len - 1)
-        and d2 = find_direction arr.(len - 1) arr.(0) in
-        if d1 = d2 then res := false ;
-        !res
-      end
+      for j = !i+2 to len - 1 do
+        (* avoid index out of bounds *)
+        if j <= len - 1 then
+        begin
+        (* skip first and last segment comparison *)
+        if !i = 0 && j = len -1 then () 
+          else
+            (let s2 = edge_arr.(j) in
+            if (segments_intersect s1 s2) ||
+                (intersect_as_collinear s1 s2)
+            then res := false 
+            else ())  
+        end
+      done
+      end;
 
-  in no_lacunas && no_straight_line;;
+      (* s1 vs all segments before it excluding the previous neighbor *)
+      begin
+      for j = !i-2 downto 0 do
+        (* avoid index out of bounds *)
+        if j >= 0 then
+        begin
+        (* skip first and last segment comparison *)
+        if !i = len -1 && j = 0 then () 
+        else
+          (let s2 = edge_arr.(j) in
+          if (segments_intersect s1 s2) ||
+              (intersect_as_collinear s1 s2)
+          then res := false)
+        end
+        done
+      end;
+      i := !i + 1
+    done;
+    !res
+  in
 
+    let no_straight_line = 
+      let res = ref true in 
+      let i = ref 0 in
+      (*check first to the second last segment*)
+      while !res && !i < len -1 do
+        let s1 = edge_arr.(!i)
+        and s2 = edge_arr.(!i+1) in
+        res := not (on_straight_line s1 s2);
+        i := !i + 1
+      done ;
+
+      (*check first and last segment*)
+      let first_seg = edge_arr.(0)
+      and last_seg = edge_arr.(len - 1) in 
+      res := not (on_straight_line first_seg last_seg) ;
+      !res
+  in
+
+    let space_for_vroomba = 
+      get_pos r (0, 0) != Outer && get_pos r (1, 1) != Outer
+
+  in no_intersect_or_collinear && no_straight_line && space_for_vroomba
+end
 
 
 
@@ -200,11 +236,14 @@ let%test "test_valid_room_simple" =
                     valid_room room) 
   polygon_list
 
+(* (0, 0); (0, 2); (-2, 2); (-2, -3); (3, -3); (3, 0)
+(0, 0); (4, 0); (4, 4); (0, 4); (0, 0); (-4, 0); (-4, -4); (0, -4) *)
 let%test "test_valid_room_simple_negative" = 
   let input  = BinaryEncodings.find_file "../../../resources/invalid.txt" in
   let polygon_list = file_to_polygons input in
   List.for_all (fun p -> 
-                    print_endline "\n\nCHECKING POLYGON\n";
-                    let room = polygon_to_room p in  
-                    not (valid_room room)) 
-  polygon_list;;
+                    (* print_endline "\n\nCHECKING POLYGON\n"; *)
+                    try (let room = polygon_to_room p in  
+                    not (valid_room room))
+                    with Failure _ -> true) 
+  polygon_list

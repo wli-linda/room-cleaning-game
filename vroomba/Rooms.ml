@@ -235,3 +235,14 @@ let%test "test_polygon_to_room&room_to_polygon" =
                     let p' = room_to_polygon room in 
                     p = p') 
   polygon_list
+
+let%test "test_polygon_to_room&room_to_polygon_negative" = 
+  let input  = BinaryEncodings.find_file "../../../resources/invalid.txt" in
+  let polygon_list = file_to_polygons input in
+  List.for_all (fun p -> 
+                    try
+                    let room = polygon_to_room p in 
+                    let p' = room_to_polygon room in 
+                    p = p'
+                    with Failure _ -> true) 
+  polygon_list
