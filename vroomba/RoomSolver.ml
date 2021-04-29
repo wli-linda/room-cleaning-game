@@ -44,6 +44,7 @@ open NodeTable
 type color = White | Black (* for moving places? *)
              
 type state = {
+  current : int * int ref;
   graph : (int * int, int) graph;
   table : ((int * int) * color) hash_table (* Alternatively, new graph struct? 
                                             * Want hashtable for easy access to 
