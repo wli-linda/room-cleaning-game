@@ -51,7 +51,7 @@ FIRST QUADRANT (Top Left):
 
 SECOND QUADRANT (Top Right):
 - First move must be Right
-- Move the point Up, Down, or Right within the boundary
+- Move the point Down, Left, or Right within the boundary
 - Can't touch the positive y-axis
 - Until reaching the positive x-axis
 
@@ -63,7 +63,7 @@ THIRD QUADRANT (Bottom Right):
 
 Fourth QUADRANT (Bottom Left):
 - First move must be Left
-- Move the point Up, Down, or Left within the boundary
+- Move the point Up, Left, or Right within the boundary
 - Can't touch the negative y-axis
 - Until reaching the negative x-axis
 - If last point = initial point -> retract by one step
@@ -84,6 +84,8 @@ type quadrant =
   | Second
   | Third
   | Fourth
+
+let four_quadrants = [|First; Second; Third; Fourth|]
 
 (* 
 Given a quadrant and the room size (side length),
@@ -111,9 +113,9 @@ let should_stop coor quad =
 let get_all_directions quad = 
   match quad with
   | First -> [|Up; Down; Right|]
-  | Second -> [|Up; Down; Right|]
+  | Second -> [|Down;Left; Right|]
   | Third -> [|Up; Down; Left|]
-  | Fourth -> [|Up; Down; Left|]
+  | Fourth -> [|Up; Left; Right|]
 
 (* get the allowed first direction in the quadrant *)
 let get_first_direction quad = 
@@ -133,7 +135,7 @@ let get_allowed_moves coor boundaries =
     and left_move = abs (left_bound - x)
     and right_move = abs (right_bound - x)
     in 
-    Printf.printf "up: %d down: %d left: %d right: %d\n" up_move down_move left_move right_move;
+    (* Printf.printf "up: %d down: %d left: %d right: %d\n" up_move down_move left_move right_move; *)
     [|up_move; down_move; left_move ; right_move|] 
 
 (* given an array of maximum movements in all directions and a direction, 
@@ -157,35 +159,59 @@ let take_steps_in_dir coor steps dir =
   | Right -> (x + steps , y)
   | _ -> error "Invalid direction."  
 
+(* relocate (0,0) along x or y axis. shift the whole polygon *)
+let relocate_starting_point polygon size= 
+  let half = size / 2 in
+  let half' = size - half in
+  (*choose which quadrant to relocate (0,0) to*)
+  let pick_quadrant = four_quadrants.(Random.int(4)) in 
+  let ((x_min, x_max), (y_min, y_max)) =  
+      match pick_quadrant with
+        | First -> (- half, -1) , (0, 0)
+        | Second -> (0, 0 ) , (0, half - 1)
+        | Third -> (0, half' -1), (-1, -1)
+        | Fourth -> (-1, -1), (- half', -1) 
+  in 
+  Printf.printf "pick x from %d\n" (x_max - x_min + 1);
+  Printf.printf "pick y from %d\n" (y_max - y_min + 1); 
+  let pick_x = Random.int(x_max - x_min + 1) + x_min in
+  let pick_y = Random.int(y_max - y_min + 1) + y_min in
+  let (dx, dy) = (float_of_int pick_x), (float_of_int pick_y) in
+  shift_polygon (dx, dy) polygon ;;
+
+(*for degbugging*)
+let print_direction dir =
+  let d = match dir with 
+  | Up -> "Up"
+  | Down -> "Down"
+  | Left -> "Left"
+  | Right -> "Right"
+  | _ -> error "Invalid direction." 
+  in
+  Printf.printf "Pick direction %s\n" d     
 
 let generate_random_room (size : int) : room = 
-  let four_quadrants = [|First; Second; Third; Fourth|] in
 
   (*move in quadrant, return final position, last direction taken and the corner list*)
 
   let move_in_quadrant init_coor prev_dir quad corner_list = 
     let boundaries = get_boundaries quad size in 
 
+    (* Since making the first move & following moves share similar procedures,
+    encode them in this generic move function  *)
     let generic_move allowed_directions random coor prev_dir corner_list =
 
       let allowed_moves = get_allowed_moves coor boundaries in 
       let dir = let i = Random.int(random) in allowed_directions.(i) in
-      let d = match dir with 
-      | Up -> "Up"
-      | Down -> "Down"
-      | Left -> "Left"
-      | Right -> "Right"
-      | _ -> error "Invalid direction." 
-      in
-      
-      Printf.printf "Pick direction %s\n" d;      
-      let max_moves = get_max_steps_in_direction allowed_moves dir in
-      Printf.printf "Max move is %d\n" max_moves;      
+ 
+      let max_moves = get_max_steps_in_direction allowed_moves dir in      
       let steps = if max_moves = 0 then 0 else (Random.int (max_moves) +1) in 
-      Printf.printf "Take %d steps\n" steps;
+      (* Printf.printf "Take %d steps\n" steps; *)
       let new_coor = take_steps_in_dir coor steps dir in
-      let (x,y) = coor in Printf.printf "Curr coor (%d, %d )\n" x y;  
-      let (x,y) = new_coor in Printf.printf "New coor (%d, %d )\n" x y;      
+      (* let (x,y) = new_coor in Printf.printf "New coor (%d, %d )\n" x y;   *)
+
+      (* if the current direction is different from prev_dir, the point has 
+      taken a turn. We record the previous point in the corner list *)    
       let new_corner_list = 
           if (dir != prev_dir) && steps > 0
           then coor :: corner_list
@@ -199,7 +225,7 @@ let generate_random_room (size : int) : room =
         generic_move allowed_dir 1 init_coor prev_dir corner_list
     in
       let make_next_move coor prev_dir corner_list =
-        (* if prev_dir is Down, dir can't be Up and vice versa *)
+        (* if prev_dir is Down, dir can't be Up and so on *)
         let allowed_dir_ls = array_to_list (get_all_directions quad) in
         let allowed_dir = 
             list_to_array 
@@ -207,6 +233,8 @@ let generate_random_room (size : int) : room =
                           match prev_dir with
                           | Up -> d != Down
                           | Down -> d!= Up
+                          | Left -> d!= Right
+                          | Right -> d!= Left
                           | _ -> true) 
             allowed_dir_ls) in
         generic_move allowed_dir 2 coor prev_dir corner_list
@@ -220,12 +248,12 @@ let generate_random_room (size : int) : room =
           then (new_coor, dir, new_corner_list)
           else make_following_moves new_coor dir new_corner_list false
     in 
-      print_endline "Making first move.";
+      (* print_endline "Making first move."; *)
       let (new_coor, dir, new_corner_list) = make_first_move () in
       if should_stop new_coor quad 
       then (new_coor, dir, new_corner_list)
       else 
-      (print_endline "Making following moves."; 
+      ( (* (print_endline "Making following moves.";  *)
       make_following_moves new_coor dir new_corner_list false)
   in
 
@@ -249,13 +277,15 @@ let generate_random_room (size : int) : room =
   in
     let final_corner_list =
     if last_dir = Up
-    then List.tl corner_list
-    else corner_list
+    then corner_list
+    else final_coor :: corner_list
   in 
-    let polygon = polygon_of_int_pairs final_corner_list in
-      let output = "resources/test.txt" in
-      write_polygons_to_file [polygon] output;
+    let polygon_raw = polygon_of_int_pairs final_corner_list in
+    let polygon = relocate_starting_point polygon_raw size in
+    let output = BinaryEncodings.find_file "../../../resources/test.txt" in
+    write_polygons_to_file [polygon] output;
     polygon_to_room polygon ;;
+
 
 
 
@@ -431,11 +461,11 @@ end
 (*                     Tests                 *)
 (*********************************************)
 
-(*
+
 let%test "Generated room is valid" = 
   let r = generate_random_room 100 in
   valid_room r
-*)
+
 
 (* TODO: add more tests *)
 let%test "test_valid_room_simple" = 

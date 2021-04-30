@@ -129,7 +129,7 @@ let fill_edges map ls =
   let fill_edge x1 y1 x2 y2 =
     (* If there are diagonal edges, throw error *)
     if abs (x1 - x2) > 0 && abs (y1 - y2) > 0
-    then (Printf.printf "Invalid edge (%d %d) (%d %d)\n" x1 y1 x2 y2;error "Invalid room!")
+    then error "Invalid room!"
     else if abs (x1 - x2) > 0
     then (if x1 > x2
           then (for i = 1 to (x1 - x2 - 1) do
