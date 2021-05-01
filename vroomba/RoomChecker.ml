@@ -173,6 +173,10 @@ A tile is cleanable if:
 1. The pos is Inner; or
 2. The pos is Edge && (Other 3 pos in the same square are not Outer)
 
+A diagonal tile is reachable if:
+1. It is cleanable (aka. is a room tile) &&
+2. Its two neighbors in the same 2x2 square as the current tile are cleanable
+
 When cleaning a tile:
 Mark the hygeine status as Clean only if the tile is Dirty
 
@@ -185,7 +189,7 @@ Mark the hygeine status as Clean only if the tile is Dirty
   - If any coordinate does not exist in room -> ignore
   - For those that are in room:
     - If not cleanable: ignore
-    - If cleanable: clean
+    - If cleanable & reacheable: clean
 3. Move the current point
 
  *)
@@ -216,6 +220,7 @@ let exist_in_room room coor =
   let all_points = get_all_points room in
   List.mem coor all_points 
 
+
 let cleanable room coor : bool =
   let p = get_pos room coor in 
   match p with 
@@ -236,6 +241,27 @@ let clean_a_tile state coor =
   then
   state.dirty_tiles := !(state.dirty_tiles) - 1;
   HygieneTable.insert ht coor Clean
+
+
+let reachable room coor neighbor = 
+  let (a, b) = coor in 
+  let (c, d) = neighbor in
+  let (dx, dy) = (c-a, d-b) in 
+  (*four next-door neighbors are reachable*)
+  if (abs dx = 1 && dy = 0) || (dx = 0 && abs dy = 1)
+  then true
+  else
+  begin 
+  (cleanable room (a, d)) &&
+  (cleanable room (c, b))
+  end
+
+let%test "test_reachable" = 
+  let s = "(0, 0); (1, 0); (1, 1); (2, 1); (2, 2); (0, 2)" in
+  let room = string_to_polygon s |> get_exn |> polygon_to_room in
+  reachable room (0, 0) (0, 1) &&
+  not (reachable room (0, 0) (1, 1))
+
 
 (*  Check that the sequence of moves is valid  *)
 let check_solution (r: room) (moves: move list) : bool = 
@@ -263,7 +289,7 @@ let check_solution (r: room) (moves: move list) : bool =
     List.iter (fun coor -> 
               if exist_in_room r coor
               then 
-                (if cleanable r coor 
+                (if cleanable r coor && reachable r curr coor
                 then clean_a_tile state coor)
               )
               neighbors;
@@ -295,14 +321,34 @@ let%test _ =
   let room = string_to_polygon s |> get_exn |> polygon_to_room in
   validate room "WDDDDDD" 
 
-(* TODO: Add more tests *)                                                 
+(* TODO: Add more tests *)
+
+let%test "test_checker_simple 1" = 
+  let s = "(0, 0); (1, 0); (1, 1); (0, 1)" in
+  let room = string_to_polygon s |> get_exn |> polygon_to_room in
+  validate room "" 
+
+let%test "test_checker_simple 2" = 
+  let s = "(0, 0); (2, 0); (2, 2); (0, 2)" in
+  let room = string_to_polygon s |> get_exn |> polygon_to_room in
+  validate room "" 
+
+let%test "test_checker_simple 3" = 
+  let s = "(0, 0); (1, 0); (1, 1); (2, 1); (2, 2); (0, 2)" in
+  let room = string_to_polygon s |> get_exn |> polygon_to_room in
+  validate room "W" 
+
+let%test "test_checker_simple 3 neg" = 
+  let s = "(0, 0); (1, 0); (1, 1); (2, 1); (2, 2); (0, 2)" in
+  let room = string_to_polygon s |> get_exn |> polygon_to_room in
+  not (validate room "") 
 
 let%test "test_checker_basic_negative" = 
   let s = "(0, 0); (6, 0); (6, 1); (8, 1); (8, 2); (6, 2); (6, 3); (0, 3)" in
   let room = string_to_polygon s |> get_exn |> polygon_to_room in
   not (validate room "WWWWDDDDD") &&
   not (validate room "WWDDAD")
-
+(* 
 let%test "test_checker_rooms_negative" = 
   let input  = BinaryEncodings.find_file "../../../resources/rooms.txt" in
   let polygon_list = file_to_polygons input in
@@ -321,4 +367,4 @@ let%test "test_checker_rooms_negative" =
 
 let%test "test_checker_random_negative" = 
   let room = generate_random_room 100 in
-  not (validate room "W")
+  not (validate room "W") *)
