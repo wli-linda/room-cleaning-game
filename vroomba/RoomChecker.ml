@@ -26,6 +26,11 @@ SOFTWARE.
 
 open Util
 open Rooms
+open Graphs
+open BetterHashTable
+open RoomGenerator
+module HygieneTable = 
+  ResizableListBasedHashTable(struct type t = (int * int) end)
 
 (*********************************************)
 (*         Movements of Vroomba              *)
@@ -44,14 +49,93 @@ let pp_move = function
   | Down -> "S"
   | Right -> "D"
 
-(*  TODO: Implement me!  *)
 (* This is a data type, representing the state of the room at a
    certain point of cleaning. It should include the room and keep
    track of Vroomba's current position, parts that are already cleaned
    and that are remaining to be cleaned. Use this data type internally
    in the function `check_solution` *)
 
-type state = unit (* You should change this definition *)
+type hygiene = 
+  | Dirty
+  | Clean
+
+type state = {
+ current : (int * int) ref ;
+ table : ((int * int) * hygiene) HygieneTable.hash_table;
+ dirty_tiles : int ref
+}
+
+(* get the number of tiles in the room *)
+let get_tiles_num room : int = 
+  let tiles = ref 0 in
+  let map = room.map in
+  let len = Array.length map in
+  for x = 0 to len - 2 do 
+    for y = 0 to len - 2 do 
+      let p1 = map.(x).(y) in 
+      let p2 = map.(x).(y + 1) in 
+      let p3 = map.(x + 1).(y) in 
+      let p4 = map.(x + 1).(y + 1) in
+      if p1 != Outer && p2 != Outer && 
+        p3 != Outer && p4 != Outer
+      then tiles := !tiles + 1
+    done;
+  done;
+  !tiles
+
+let%test "test_get_actual_size" =
+  let input  = BinaryEncodings.find_file "../../../resources/basic.txt" in
+  let polygon_list = file_to_polygons input in
+  let p = List.hd polygon_list in
+  let room = polygon_to_room p in 
+  let num = get_tiles_num room in
+  num = 20
+
+(*get all coordinates of the room & outside space*)
+let get_all_points room =
+  let map = room.map in 
+  let len = Array.length map in
+  let all_points = ref [] in 
+  for x = 0 to len - 1 do 
+    for y = 0 to len - 1 do 
+    let coor = map_index_to_coor room (x,y) in
+    all_points := coor :: !all_points
+    done
+  done;
+  !all_points
+
+
+let%test "test_get_actual_size" =
+  let input  = BinaryEncodings.find_file "../../../resources/basic.txt" in
+  let polygon_list = file_to_polygons input in
+  let p = List.hd polygon_list in
+  let room = polygon_to_room p in 
+  let all_points = get_all_points room in
+  let num = List.length all_points in 
+  num = 81
+
+
+let initiate_state room =
+  let num = get_tiles_num room in
+  let all_points = get_all_points room in
+  let ht = HygieneTable.mk_new_table num in
+  List.iter (fun coor -> HygieneTable.insert ht coor Dirty) all_points;
+  let starting_point = (0,0) in
+  { 
+    current  = ref starting_point;
+    table =  ht;
+    dirty_tiles = ref num
+  }
+  
+let%test "test_initial_state" =
+  let input  = BinaryEncodings.find_file "../../../resources/basic.txt" in
+  let polygon_list = file_to_polygons input in
+  let p = List.hd polygon_list in
+  let room = polygon_to_room p in 
+  let state = initiate_state room in
+  !(state.current) = (0,0) &&
+  !(state.dirty_tiles) = 20
+
 
 (*********************************************)
 (*            Checking solution              *)
@@ -75,10 +159,129 @@ let string_to_solution (s: string) : move list option =
        Some (List.rev !res))
   with error ->
     None
-      
+
+let move_in_dir coor dir =
+  let (x, y ) = coor in
+  match dir with 
+  | Up -> (x , y + 1)
+  | Down -> (x , y - 1)
+  | Left -> (x - 1 , y)
+  | Right -> (x + 1 , y)
+
+(* RUI: 
+A tile is cleanable if:
+1. The pos is Inner; or
+2. The pos is Edge && (Other 3 pos in the same square are not Outer)
+
+When cleaning a tile:
+Mark the hygeine status as Clean only if the tile is Dirty
+
+1. At current location, check the coordinates:
+  - If does not exist in room -> fail game
+  - If exists:
+    - The tile is not cleanable: fail game
+    - The tile is cleanable: change hygeine state to Clean in hashtable & dirty_tiles -1
+2. Check the 8 neighbouring coordinates:
+  - If any coordinate does not exist in room -> ignore
+  - For those that are in room:
+    - If not cleanable: ignore
+    - If cleanable: clean
+3. Move the current point
+
+ *)
+
+
+(*retrieve the coordinates of the points in the same tile*)
+let get_three_neighbors (x, y) = 
+  let n1 = (x, y + 1)
+  and n2 = (x + 1, y)
+  and n3 = (x + 1, y +1) in
+  [n1; n2; n3]
+
+(*retrieve the coordinates of the neighboring tiles*)
+let get_eight_neighbors (x, y) = 
+  let n1 = (x, y + 1)
+  and n2 = (x + 1, y)
+  and n3 = (x + 1, y + 1)
+  and n4 = (x + 1, y - 1)
+  and n5 = (x, y - 1)
+  and n6 = (x - 1, y - 1)
+  and n7 = (x - 1, y)
+  and n8 = (x - 1, y + 1)
+  in
+  [n1; n2; n3; n4; n5; n6; n7; n8]
+
+(*if a coordinate exists in the room space*)
+let exist_in_room room coor = 
+  let all_points = get_all_points room in
+  List.mem coor all_points 
+
+let cleanable room coor : bool =
+  let p = get_pos room coor in 
+  match p with 
+  | Outer -> false
+  | Inner -> true
+  | Edge -> 
+  let neighbours = get_three_neighbors coor in 
+  List.for_all (fun n ->  
+                  (exist_in_room room n) && 
+                  let np = get_pos room n 
+                    in not (np = Outer)  ) 
+               neighbours 
+
+let clean_a_tile state coor = 
+  let ht = state.table in 
+  let hg = get_exn (HygieneTable.get ht coor) in
+  if hg = Dirty
+  then
+  state.dirty_tiles := !(state.dirty_tiles) - 1;
+  HygieneTable.insert ht coor Clean
+
 (*  Check that the sequence of moves is valid  *)
 let check_solution (r: room) (moves: move list) : bool = 
-  error "Implement me!"
+  let move_list = ref moves in
+  let remaining = ref ((List.length moves) + 1) in
+  let state = initiate_state r in 
+  let success = ref true in
+  while (!success && !remaining > 0) do
+    begin
+
+    (* Check current point *)
+    let curr = !(state.current) in
+    begin
+    if not (exist_in_room r curr)
+    then success := false
+    else 
+      (if not (cleanable r curr)
+      then success := false 
+      else clean_a_tile state curr
+      ) 
+    end ;
+
+    (* Check the eight neighbors *)
+    let neighbors = get_eight_neighbors curr in
+    List.iter (fun coor -> 
+              if exist_in_room r coor
+              then 
+                (if cleanable r coor 
+                then clean_a_tile state coor)
+              )
+              neighbors;
+
+    (* move Vroomba and update move_list  *)
+    remaining := !remaining - 1;
+    if !remaining > 0
+    then
+      (let dir = List.hd !move_list in
+      state.current := move_in_dir curr dir;
+      move_list := List.tl !move_list;
+      )
+    end
+  done;
+  if !(state.dirty_tiles) > 0 
+  then false
+  else !success
+
 
 (*  Top-level validator  *)
 let validate r s = 
@@ -86,11 +289,36 @@ let validate r s =
   | None -> false
   | Some moves -> check_solution r moves
  
-(* 
+
 let%test _ = 
   let s = "(0, 0); (6, 0); (6, 1); (8, 1); (8, 2); (6, 2); (6, 3); (0, 3)" in
   let room = string_to_polygon s |> get_exn |> polygon_to_room in
   validate room "WDDDDDD" 
-*)
 
 (* TODO: Add more tests *)                                                 
+
+let%test "test_checker_basic_negative" = 
+  let s = "(0, 0); (6, 0); (6, 1); (8, 1); (8, 2); (6, 2); (6, 3); (0, 3)" in
+  let room = string_to_polygon s |> get_exn |> polygon_to_room in
+  not (validate room "WWWWDDDDD") &&
+  not (validate room "WWDDAD")
+
+let%test "test_checker_rooms_negative" = 
+  let input  = BinaryEncodings.find_file "../../../resources/rooms.txt" in
+  let polygon_list = file_to_polygons input in
+  List.for_all (fun p -> 
+                    let room = polygon_to_room p in 
+                    not (validate room "W") ) 
+  polygon_list
+
+let%test "test_checker_rooms_negative" = 
+  let input  = BinaryEncodings.find_file "../../../resources/rooms.txt" in
+  let polygon_list = file_to_polygons input in
+  List.for_all (fun p -> 
+                    let room = polygon_to_room p in 
+                    not (validate room "W") ) 
+  polygon_list
+
+let%test "test_checker_random_negative" = 
+  let room = generate_random_room 100 in
+  not (validate room "W")

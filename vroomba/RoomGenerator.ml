@@ -26,7 +26,7 @@ SOFTWARE.
 open Util
 open Rooms
 open Polygons
-open ArrayUtil  ;;
+open ArrayUtil 
 (*********************************************)
 (*       Automated generation of rooms       *)
 (*********************************************)
@@ -172,8 +172,8 @@ let relocate_starting_point polygon size=
         | Third -> (0, half' -1), (-1, -1)
         | Fourth -> (-1, -1), (- half', -1) 
   in 
-  Printf.printf "pick x from %d\n" (x_max - x_min + 1);
-  Printf.printf "pick y from %d\n" (y_max - y_min + 1); 
+  (* Printf.printf "pick x from %d\n" (x_max - x_min + 1); *)
+  (* Printf.printf "pick y from %d\n" (y_max - y_min + 1);  *)
   let pick_x = Random.int(x_max - x_min + 1) + x_min in
   let pick_y = Random.int(y_max - y_min + 1) + y_min in
   let (dx, dy) = (float_of_int pick_x), (float_of_int pick_y) in
@@ -258,14 +258,14 @@ let generate_random_room (size : int) : room =
   in
 
   let rec move_through_four_quadrants init_coor prev_dir corner_list num =
-    Printf.printf "Quadrant.(%d)\n" num;
+(*     Printf.printf "Quadrant.(%d)\n" num; *)
     if num = 4
     then (init_coor, prev_dir, corner_list)
     else
     let quad = four_quadrants.(num) in
     let (new_coor, dir, new_corner_list) = move_in_quadrant init_coor prev_dir quad corner_list
     in 
-    let (x, y) = new_coor in Printf.printf "----- Final coor (%d, %d)\n" x y;
+(*     let (x, y) = new_coor in Printf.printf "----- Final coor (%d, %d)\n" x y; *)
     move_through_four_quadrants new_coor dir new_corner_list (num + 1)
   
   in 
@@ -275,20 +275,18 @@ let generate_random_room (size : int) : room =
   let final_coor, last_dir, corner_list =
       move_through_four_quadrants initial_point Up [initial_point] 0
   in
+
     let final_corner_list =
     if last_dir = Up
     then corner_list
     else final_coor :: corner_list
   in 
+  (*Convert corner list to polygon & shift (0,0) to a random but valid starting point *)
     let polygon_raw = polygon_of_int_pairs final_corner_list in
     let polygon = relocate_starting_point polygon_raw size in
     let output = BinaryEncodings.find_file "../../../resources/test.txt" in
     write_polygons_to_file [polygon] output;
     polygon_to_room polygon ;;
-
-
-
-
 
 
 (* Define what it means to the room to be valid (e.g., no lacunas,
@@ -329,6 +327,12 @@ let coor_to_point (x,y)=
 TODO: Change this for negative coordinates*)
 let get_pos room (x,y) =
   room.map.(x).(y)
+
+let coor_to_map_index room (x,y) = 
+  (x, y)
+
+let map_index_to_coor room (x,y)  = 
+  (x, y)
 
 let polygon_to_int_pairs polygon = 
   let int_pairs = ref [] in 
@@ -463,8 +467,12 @@ end
 
 
 let%test "Generated room is valid" = 
-  let r = generate_random_room 100 in
-  valid_room r
+  for i = 0 to 100 do
+    let size = 2 + Random.int 500 in
+    let r = generate_random_room size in
+    assert(valid_room r)
+    done;
+  true
 
 
 (* TODO: add more tests *)
@@ -478,6 +486,7 @@ let%test "test_valid_room_simple" =
 
 (* (0, 0); (0, 2); (-2, 2); (-2, -3); (3, -3); (3, 0)
 (0, 0); (4, 0); (4, 4); (0, 4); (0, 0); (-4, 0); (-4, -4); (0, -4) *)
+
 let%test "test_valid_room_simple_negative" = 
   let input  = BinaryEncodings.find_file "../../../resources/invalid.txt" in
   let polygon_list = file_to_polygons input in
