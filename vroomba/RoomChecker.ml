@@ -343,6 +343,16 @@ let%test "test_checker_simple 3 neg" =
   let room = string_to_polygon s |> get_exn |> polygon_to_room in
   not (validate room "") 
 
+let%test "test_checker_simple 4" = 
+  let s = "(0, 0); (0, 3); (1, 3); (1, 0)" in
+  let room = string_to_polygon s |> get_exn |> polygon_to_room in
+  validate room "W" 
+
+let%test "test_checker_simple 4 neg" = 
+  let s = "(0, 0); (0, 3); (1, 3); (1, 0)" in
+  let room = string_to_polygon s |> get_exn |> polygon_to_room in
+  not (validate room "") 
+
 let%test "test_checker_basic_negative" = 
   let s = "(0, 0); (6, 0); (6, 1); (8, 1); (8, 2); (6, 2); (6, 3); (0, 3)" in
   let room = string_to_polygon s |> get_exn |> polygon_to_room in
