@@ -70,6 +70,22 @@ let render_games_eg (input_path: string) (output_path : string): unit =
   open_graph " 800x600";
   (* Example room, resized and shifted to look nice *)
   let play r =
+    (* Use the index as the coordinates first *)
+    (* Draw the board *)
+    let size = Array.length r.map in 
+    let board_int_pairs = [(0, 0); (0, size); (size, size); (size, 0)] in 
+    let board_poly = polygon_of_int_pairs board_int_pairs in 
+    draw_polygon ~color:(Graphics.blue) board_poly;
+
+    (* Can print a short instruction *)
+    (* Draw the room boundary and fill the room *)
+    let room_poly = r.edges |> polygon_of_int_pairs in 
+    draw_polygon ~color:(Graphics.red) board_poly;
+    for i = 0 to size -1 do
+      for j = 0 to size -1 do
+        if  
+      done
+    done
     wait_until_q_pressed ()
   in let poly_list = file_to_polygons input_path 
   in let room_list = List.map polygon_to_room poly_list 
