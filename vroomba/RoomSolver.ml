@@ -25,32 +25,88 @@ SOFTWARE.
 
 open Util
 open Rooms
-open RoomChecker
+include RoomChecker
 open RoomGenerator
 
+open RoomUtil
+open BetterHashTable
 open Graphs
 open LinkedGraphs
-open NodeTable
 
 (*********************************************)
 (*              Room solver                  *)
 (*********************************************)
+
+module CoorTable =
+  ResizableListBasedHashTable(struct type t = (int * int) end)
 
 (* This is a complex task. Feel free to introduce whatever functions
    and data types you consider necessary, and also rely on data
    structures and algorithms from the lectures (see folder `lib` of
    this project). *)
 
-type color = White | Black (* for moving places? *)
-             
-type state = {
-  current : int * int ref;
-  graph : (int * int, int) graph;
-  table : ((int * int) * color) hash_table (* Alternatively, new graph struct? 
-                                            * Want hashtable for easy access to 
-                                            * movable coordinates, since node_id
-                                            * doesn't provide much info *)
-}
+let inside_room r coor : bool =
+  let (x, y) = coor in
+  let left_bottom = get_pos r (x, y) in
+  if left_bottom = Outer
+  then false
+  else begin
+    (get_pos r (x + 1, y) != Outer &&
+     get_pos r (x, y + 1) != Outer &&
+     get_pos r (x + 1, y + 1) != Outer)
+  end
+
+let movable_coords r =
+  let ls = ref [] in
+  let map = r.map in
+  let len = Array.length map in
+  for x = 0 to len - 2 do
+    for y = 0 to len - 2 do
+      if inside_room r (x, y)
+      then ls := (x, y) :: !ls
+    done
+  done;
+  !ls
+
+let init_state r =
+  let ls = movable_coords r in
+  let num = List.length ls in
+  let ht = HygieneTable.mk_new_table num in
+  List.iter (fun coor -> HygieneTable.insert ht coor Dirty) ls;
+  let start = (0, 0) in
+  { current = ref start;
+    table = ht;
+    dirty_tiles = ref num }
+
+let get_id ct coor =
+  CoorTable.get ct coor
+
+let add_edges g ct coor =
+  let add_edge src dst_op =
+    if dst_op != None
+    then (let dst = get_exn dst_op in
+          add_edge g src dst;
+          set_edge_label g src dst 1) in
+  let (x, y) = coor in
+  let id = get_exn @@ get_id ct coor in
+  let up = get_id ct (x, y + 1) in
+  let left = get_id ct (x - 1, y) in
+  let down = get_id ct (x, y - 1) in
+  let right = get_id ct (x + 1, y) in
+  add_edge id up;
+  add_edge id left;
+  add_edge id down;
+  add_edge id right
+
+let create_graph r =
+  let g = mk_graph () in
+  let ls = movable_coords r in
+  let ct = CoorTable.mk_new_table (List.length ls) in
+  List.iter (fun coor ->
+      CoorTable.insert ct coor !(g.next_node_id);
+      add_node g coor) ls;
+  List.iter (fun coor -> add_edges g ct coor) ls;
+  g
 
 (* Solve the room and produce the list of moves. *)
 (* Make use of RoomChecker.state state type internally in your solver *)
