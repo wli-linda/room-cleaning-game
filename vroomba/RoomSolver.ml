@@ -66,7 +66,7 @@ let movable_coords r =
       then ls := (x, y) :: !ls
     done
   done;
-  !ls
+  List.rev !ls
 
 let reachable' state coor neighbor = 
   let (a, b) = coor in 
@@ -142,49 +142,93 @@ let create_graph r =
   List.iter (fun coor -> add_edges g ct coor) ls;
   (g, ct)
   
-  
+    
+let moves_to_string ls =
+  let buffer = Buffer.create 1 in
+  List.iter (fun m -> Buffer.add_string buffer (pp_move m)) ls;
+  Buffer.contents buffer
+
+
 (* Solve the room and produce the list of moves. *)
 (* Make use of RoomChecker.state state type internally in your solver *)
 let solve_room (r: room) : move list =
   let (g, ct) = create_graph r in
   let state = init_state r in
   let ht = state.table in
-  let ls = ref [] in
+  let moves = ref [] in
+  let init_coor = get_exn @@ get_id ct !(state.current) in
+  let get_coor g id = get_value @@ get_node g id in
   
-  let get_coor g id =
-    get_value @@ get_node g id
-  in
+  let rec check_hygiene ls =
+    match ls with
+    | [] -> None
+    | h :: tl ->
+      let coor = get_coor g h in
+      let is_cleaned = get_exn @@ HygieneTable.get ht coor in
+      if is_cleaned = Dirty
+      then Some h
+      else check_hygiene tl
+  in 
   
   (* TODO: DFS & BACKTRACKING *)
-  let rec dfs_visit id ls =
-    let (x, y) = get_coor g id in
-    clean state (x, y);
-    get_succ g id |> List.iter (fun v ->
-        get_succ g v |> List.iter (fun v' ->
-            let v'_coor = get_coor g v' in
-            let v'_cleaned = get_exn @@ HygieneTable.get ht v'_coor in
-            if v'_cleaned = Dirty
-            then begin
-              let (x', y') = get_coor g v in
-              if x = x' && y + 1 = y' then ls := RoomChecker.Up :: !ls
-              else if x - 1 = x' && y = y' then ls := Left :: !ls
-              else if x = x' && y - 1 = y' then ls := Down :: !ls
-              else if x + 1 = x' && y = y' then ls := Right :: !ls;
-              dfs_visit v ls
-            end));
-  in
-  dfs_visit (get_exn @@ get_id ct !(state.current)) ls;
-  List.rev !ls
+  let rec dfs_visit id =
+    let new_move = ref true in
+    clean state (get_coor g id);
+    let rec walk_succ_ls id_walk succ_ls ls_moved =
+      let (x, y) = get_coor g id_walk in
+      match succ_ls with
+      | [] ->
+        if !new_move = true
+        then (new_move := false; backtrack !moves id_walk)
+        else backtrack ls_moved id_walk
+      | h :: tl ->
+        let succ_succ_ls = get_succ g h in
+        let next_move_op = check_hygiene succ_succ_ls in
+        if next_move_op = None
+        then walk_succ_ls id_walk tl ls_moved 
+        else begin
+          new_move := true;
+          let (x', y') = get_coor g h in
+          if x = x' && y + 1 = y' then moves := RoomChecker.Up :: !moves
+          else if x - 1 = x' && y = y' then moves := Left :: !moves
+          else if x = x' && y - 1 = y' then moves := Down :: !moves
+          else if x + 1 = x' && y = y' then moves := Right :: !moves
+          else error "Invalid move??";
+          dfs_visit h
+        end
+    and backtrack ls_moved id_bk =
+      match ls_moved with
+      | [] -> error "Unsolvable room!"
+      | h :: tl ->
+        let (x, y) = get_coor g id_bk in
+        let (coor', rev_move) = match h with
+          | RoomChecker.Up -> ((x, y - 1), Down)
+          | Left -> ((x + 1, y), Right)
+          | Down -> ((x, y + 1), Up)
+          | Right -> ((x - 1, y), Left) in
+        moves := h :: !moves;
+        if get_id ct coor' = None
+        then (let (x', y') = coor' in
+              Printf.printf "Moved from: (%d, %d); \nMoveto: (%d, %d) \n"
+                x y x' y';
+             Printf.printf "Moves: %s \n" (moves_to_string !moves));
+        let id' = get_exn @@ get_id ct coor' in
+        let succ_ls' = get_succ g id' in
+        walk_succ_ls id' succ_ls' tl
+    in let succ_ls = get_succ g id in
+    walk_succ_ls id succ_ls []
+  in dfs_visit init_coor;
+  List.rev !moves
+
+
 
 (*********************************************)
 (*               Testing                     *)
 (*********************************************)
 
-(*
 let%test "Randomised solver testing" = 
   let r = generate_random_room 30 in
   let moves = solve_room r in
   check_solution r moves
- *)
 
 (* TODO: Add more tests *)
