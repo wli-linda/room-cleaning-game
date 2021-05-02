@@ -33,6 +33,7 @@ let polygon_to_int_pairs polygon =
             polygon;
   List.rev !int_pairs
 
+(* ========Segments and Direction=======*)
 type direction = 
   |Up
   |Down
@@ -52,6 +53,25 @@ let find_direction p1 p2 =
     then (if v = 0 then Right else (if v>0 then Diagonal else Diagonal))
     else (if v = 0 then Left else (if v>0 then Diagonal else Diagonal) ))
 
+let on_straight_line s1 s2= 
+    let (p1, p2) = s1
+    and (p3, p4) = s2 in
+    let d1 = find_direction p2 p1
+    and d2 = find_direction p4 p3 in
+    d1 = d2
+
+(*for degbugging*)
+let print_direction dir =
+  let d = match dir with 
+  | Up -> "Up"
+  | Down -> "Down"
+  | Left -> "Left"
+  | Right -> "Right"
+  | _ -> error "Invalid direction." 
+  in
+  Printf.printf "Pick direction %s\n" d     
+
+(*also for debugging*)
 let print_segment s = 
   let p1, p2 = s in 
   let (x1, y1) = point_to_coor p1 in 
@@ -60,13 +80,6 @@ let print_segment s =
 
 let print_segment_list l = 
   List.iter (fun s -> print_segment s) l
-
-let on_straight_line s1 s2= 
-    let (p1, p2) = s1
-    and (p3, p4) = s2 in
-    let d1 = find_direction p2 p1
-    and d2 = find_direction p4 p3 in
-    d1 = d2
 
 
 
@@ -125,13 +138,18 @@ let get_eight_neighbors (x, y) =
   [n1; n2; n3; n4; n5; n6; n7; n8]
 
 
-  (*if a coordinate exists in the room space*)
+  (*if a coordinate exists in the room & non-room space*)
 let exist_in_room room coor = 
   let all_points = get_all_points room in
   List.mem coor all_points 
 
 
-(*is a tile at coor cleanable? aka. is a room tile*)
+(*is a tile at coor cleanable? aka. is a room tile?
+
+A tile is cleanable if:
+1. The pos is Inner; or
+2. The pos is Edge && (Other 3 pos in the same square are not Outer)*)
+
 let cleanable room coor : bool =
   let p = get_pos room coor in 
   match p with 
@@ -145,18 +163,30 @@ let cleanable room coor : bool =
                     in not (np = Outer)  ) 
                neighbours
 
-(* is a neighbor tile reachable from the current tile*)
+(* is a neighbor tile reachable from the current tile
+
+four next-door neighbors are always reachable given that they are a tile (cleanable)
+
+A diagonal tile is reachable if:
+1. It is cleanable (aka. is a room tile) &&
+2. Its two neighbors in the same 2x2 square as the current tile are cleanable *)
+
 let reachable room coor neighbor = 
   let (a, b) = coor in 
   let (c, d) = neighbor in
-  let (dx, dy) = (c-a, d-b) in 
-  (*four next-door neighbors are reachable*)
-  if (abs dx = 1 && dy = 0) || (dx = 0 && abs dy = 1)
-  then true
-  else
-  begin 
-  (cleanable room (a, d)) &&
-  (cleanable room (c, b))
+  let (dx, dy) = (c-a, d-b) in
+
+  (* the neighbor is a tile *)
+  cleanable room neighbor &&
+
+  begin
+    (*the neighbor is next-door -> reachable *)
+    ((abs dx = 1 && dy = 0) || (dx = 0 && abs dy = 1)) ||
+    (*the neighbor is diagonal to current tile*)
+    begin 
+    (cleanable room (a, d)) &&
+    (cleanable room (c, b))
+    end
   end
 
 
@@ -184,4 +214,4 @@ let%test "test_reachable" =
   let s = "(0, 0); (1, 0); (1, 1); (2, 1); (2, 2); (0, 2)" in
   let room = string_to_polygon s |> get_exn |> polygon_to_room in
   reachable room (0, 0) (0, 1) &&
-  not (reachable room (0, 0) (1, 1))
+  not (reachable room (0, 0) (1, 1)) 

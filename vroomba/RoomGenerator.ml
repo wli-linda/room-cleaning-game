@@ -173,16 +173,6 @@ let relocate_starting_point polygon size=
   let (dx, dy) = (float_of_int pick_x), (float_of_int pick_y) in
   shift_polygon (dx, dy) polygon ;;
 
-(*for degbugging*)
-let print_direction dir =
-  let d = match dir with 
-  | Up -> "Up"
-  | Down -> "Down"
-  | Left -> "Left"
-  | Right -> "Right"
-  | _ -> error "Invalid direction." 
-  in
-  Printf.printf "Pick direction %s\n" d     
 
 let generate_random_room (size : int) : room = 
 
@@ -287,6 +277,7 @@ let generate_random_room (size : int) : room =
    obstacles, there is a place for initial Vroomba position, etc). *)
 
 (*RUI: A few checks:
+
 1. No lacunas: 
   In our implementation, drawing a lacuna will end up with edges extending out from 
   existing edges that not adjacent to it. So here we just need to check if edge intersect
@@ -295,16 +286,19 @@ let generate_random_room (size : int) : room =
   Same as above
 
 3. Initial place for Vroomba: O(1)
-  (0,0) must not be Outer
-  (1,1) must not be Outer
+  (0,0) must be cleanable (aka. is a tile)
+
 4. No diagonal edges: 
   Consecutive edges only run horiontally or vertically
   only change in x or y coordinate
   *this will throw error in polygon_to_room
+
 6. No straight lines :
   3 consecutive edges on the same line are not allowed
+
 7. No collinear edges:
   Check for non-collinearity while checking #1
+
 8. No "8" shaped rooms:
   same checks as #1
    
@@ -316,11 +310,14 @@ let generate_random_room (size : int) : room =
 let valid_room (r: room) : bool = 
   let polygon = room_to_polygon r in 
   let len = List.length !(r.edges) in
+
+  (* A room cannot have less than 4 edges *)
   if len <= 3 then false 
   else
+
   begin
 
-  (*get edge list in Point pairs *)
+  (*get edge list in (Point * Point) pairs *)
   let edge_list = Polygons.edges polygon in
   let edge_arr = list_to_array edge_list in
 
@@ -394,10 +391,6 @@ let valid_room (r: room) : bool =
   in no_intersect_or_collinear && no_straight_line && space_for_vroomba
 end
 
-
-
-
-
 (*********************************************)
 (*                     Tests                 *)
 (*********************************************)
@@ -421,8 +414,12 @@ let%test "test_valid_room_simple" =
                     valid_room room) 
   polygon_list
 
-(* (0, 0); (0, 2); (-2, 2); (-2, -3); (3, -3); (3, 0)
-(0, 0); (4, 0); (4, 4); (0, 4); (0, 0); (-4, 0); (-4, -4); (0, -4) *)
+(*  To be tested:
+
+(0, 0); (0, 2); (-2, 2); (-2, -3); (3, -3); (3, 0)
+(0, 0); (4, 0); (4, 4); (0, 4); (0, 0); (-4, 0); (-4, -4); (0, -4) 
+(0, 0); (0, 1); (1, 1); (2, 1); (2, 2); (-1, 2); (-1, 0)
+*)
 
 let%test "test_valid_room_simple_negative" = 
   let input  = BinaryEncodings.find_file "../../../resources/invalid.txt" in

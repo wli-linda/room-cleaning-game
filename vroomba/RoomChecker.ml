@@ -123,14 +123,6 @@ let move_in_dir coor dir =
   | Right -> (x + 1 , y)
 
 (* RUI: 
-A tile is cleanable if:
-1. The pos is Inner; or
-2. The pos is Edge && (Other 3 pos in the same square are not Outer)
-
-A diagonal tile is reachable if:
-1. It is cleanable (aka. is a room tile) &&
-2. Its two neighbors in the same 2x2 square as the current tile are cleanable
-
 When cleaning a tile:
 Mark the hygeine status as Clean only if the tile is Dirty
 
@@ -184,7 +176,7 @@ let check_solution (r: room) (moves: move list) : bool =
     List.iter (fun coor -> 
               if exist_in_room r coor
               then 
-                (if cleanable r coor && reachable r curr coor
+                (if reachable r curr coor
                 then clean_a_tile state coor)
               )
               neighbors;
