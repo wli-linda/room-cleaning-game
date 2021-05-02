@@ -259,10 +259,6 @@ let generate_random_room (size : int) : room =
     let polygon' = relocate_starting_point polygon in
     let room = polygon_to_room polygon' in
 
-    (*delete after debugging*)
-    let output = BinaryEncodings.find_file "../../../resources/generator_test.txt" in
-    write_polygons_to_file [room_to_polygon room] output;
-
     room
 
 
