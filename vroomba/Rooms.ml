@@ -25,6 +25,7 @@ SOFTWARE.
 
 open ArrayUtil
 open Polygons
+open Util
 
 (*********************************************)
 (*         Representation of Rooms           *)
@@ -51,6 +52,7 @@ let mk_room size =
   { map = map;
     edges = ref [(0, 0)]
   }
+
 
 (*  Read a polygon from a string of coordinates as in resources/basic.txt  *)
 (*  A string can be ill-formed! *)
@@ -125,6 +127,7 @@ let write_polygons_to_file (ps: polygon list) (path: string) : unit =
 
 let fill_edges map ls =
   let fill_edge x1 y1 x2 y2 =
+    (* If there are diagonal edges, throw error *)
     if abs (x1 - x2) > 0 && abs (y1 - y2) > 0
     then error "Invalid room!"
     else if abs (x1 - x2) > 0
@@ -189,6 +192,7 @@ let fill_room map =
 (*  Convert a polygon to a room data type  *)
 let polygon_to_room (p: polygon) : room =
   (* TODO: get float list that starts from (0, 0) *)
+  (* In case polygons don't start with (0,0) *)
   
   
   (* create room based on list *)
@@ -211,3 +215,35 @@ let room_to_polygon (r: room) : polygon =
   polygon_of_int_pairs !(r.edges)
 
 
+(*test*)
+
+
+let%test "test_file_to_polygon&write_polygons_to_file" = 
+  let input  = BinaryEncodings.find_file "../../../resources/rooms.txt" in
+  let output = "test.tmp" in
+  let string = ReadingFiles.read_file_to_strings input in 
+  let polygon_list = file_to_polygons input in
+  write_polygons_to_file polygon_list output;
+  let string' = ReadingFiles.read_file_to_strings output in
+  Sys.remove output;
+  string = string'
+
+let%test "test_polygon_to_room&room_to_polygon" = 
+  let input  = BinaryEncodings.find_file "../../../resources/basic.txt" in
+  let polygon_list = file_to_polygons input in
+  List.for_all (fun p -> 
+                    let room = polygon_to_room p in 
+                    let p' = room_to_polygon room in 
+                    p = p') 
+  polygon_list
+
+let%test "test_polygon_to_room&room_to_polygon_negative" = 
+  let input  = BinaryEncodings.find_file "../../../resources/invalid.txt" in
+  let polygon_list = file_to_polygons input in
+  List.for_all (fun p -> 
+                    try
+                    let room = polygon_to_room p in 
+                    let p' = room_to_polygon room in 
+                    p = p'
+                    with Failure _ -> true) 
+  polygon_list
