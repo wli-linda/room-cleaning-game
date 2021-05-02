@@ -194,8 +194,8 @@ let fill_room map =
 (*  Convert a polygon to a room data type  *)
 let polygon_to_room (p: polygon) : room =
   (* get information about the polygon *)
-  let size_pos = ref 0 in
-  let size_neg = ref 0 in
+  let pos_x = ref 0 in
+  let pos_y = ref 0 in
   let neg_x = ref 0 in
   let neg_y = ref 0 in
   let ls = ref [] in
@@ -204,12 +204,10 @@ let polygon_to_room (p: polygon) : room =
       let y = int_of_float @@ get_y e in
       
       (* get room size with max/min coordinates *)
-      if x > !size_pos then size_pos := x
-      else if y > !size_pos then size_pos := y;
-      if x < !size_neg then size_neg := x
-      else if y < !size_neg then size_neg := y;
+      if x > !pos_x then pos_x := x;
+      if y > !pos_y then pos_y := y;
       
-      (* get shift values for negative coordinates *)
+      (* and get shift values for negative coordinates *)
       if x < !neg_x then neg_x := x;
       if y < !neg_y then neg_y := y;
 
@@ -217,7 +215,9 @@ let polygon_to_room (p: polygon) : room =
       ls := (x, y) :: !ls) p;
 
   (* create room based on coordinate list *)
-  let r = mk_room (!size_pos - !size_neg + 1) in
+  let range_x = !pos_x - !neg_x in
+  let range_y = !pos_y - !neg_y in
+  let r = mk_room (1 + max range_x range_y) in
   r.edges := (List.rev !ls);
   if !neg_x < 0 || !neg_y < 0
   then begin

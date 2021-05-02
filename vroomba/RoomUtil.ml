@@ -13,7 +13,7 @@ let coor_to_point (x,y)=
   Point (float_of_int x, float_of_int y)
 
 (* convert coordinates to room.map indices *)
-let coor_to_map_index room (x,y) = 
+let coor_to_map_index room (x, y) = 
   let (minx, miny) = !(room.shift) in
   (x - minx, y - miny)
 
