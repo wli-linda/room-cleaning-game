@@ -26,7 +26,8 @@ SOFTWARE.
 open Util
 open Rooms
 open Polygons
-open ArrayUtil  ;;
+open ArrayUtil
+open RoomUtil 
 (*********************************************)
 (*       Automated generation of rooms       *)
 (*********************************************)
@@ -66,18 +67,13 @@ Fourth QUADRANT (Bottom Left):
 - Move the point Up, Left, or Right within the boundary
 - Can't touch the negative y-axis
 - Until reaching the negative x-axis
-- If last point = initial point -> retract by one step
+- If last point = initial point -> do not add last point to corner list
 
-
+Some limitations on moving directions & steps in each quadrant
+- The maximum number of steps allowed to take in a direction is limited by the boundary 
+- If the previous move is Up, the next can't be Down, etc. Basically, can't "cancel" the previous move
 *)
 
-type direction = 
-  |Up
-  |Down
-  |Left
-  |Right
-  |Diagonal
-  |Stop
 
 type quadrant =
   | First
@@ -160,35 +156,14 @@ let take_steps_in_dir coor steps dir =
   | _ -> error "Invalid direction."  
 
 (* relocate (0,0) along x or y axis. shift the whole polygon *)
-let relocate_starting_point polygon size= 
-  let half = size / 2 in
-  let half' = size - half in
-  (*choose which quadrant to relocate (0,0) to*)
-  let pick_quadrant = four_quadrants.(Random.int(4)) in 
-  let ((x_min, x_max), (y_min, y_max)) =  
-      match pick_quadrant with
-        | First -> (- half, -1) , (0, 0)
-        | Second -> (0, 0 ) , (0, half - 1)
-        | Third -> (0, half' -1), (-1, -1)
-        | Fourth -> (-1, -1), (- half', -1) 
-  in 
-  Printf.printf "pick x from %d\n" (x_max - x_min + 1);
-  Printf.printf "pick y from %d\n" (y_max - y_min + 1); 
-  let pick_x = Random.int(x_max - x_min + 1) + x_min in
-  let pick_y = Random.int(y_max - y_min + 1) + y_min in
-  let (dx, dy) = (float_of_int pick_x), (float_of_int pick_y) in
-  shift_polygon (dx, dy) polygon ;;
-
-(*for degbugging*)
-let print_direction dir =
-  let d = match dir with 
-  | Up -> "Up"
-  | Down -> "Down"
-  | Left -> "Left"
-  | Right -> "Right"
-  | _ -> error "Invalid direction." 
-  in
-  Printf.printf "Pick direction %s\n" d     
+let relocate_starting_point polygon = 
+  let p = polygon_to_int_pairs polygon in
+  let room = polygon_to_room polygon in
+  let tiles = get_all_tiles room in
+  let len = List.length tiles in
+  let (x,y) = List.nth tiles (Random.int len) in
+  let polygon' = List.map (fun (a, b) -> (a - x, b - y)) p in
+  polygon_of_int_pairs polygon'
 
 let generate_random_room (size : int) : room = 
 
@@ -206,9 +181,7 @@ let generate_random_room (size : int) : room =
  
       let max_moves = get_max_steps_in_direction allowed_moves dir in      
       let steps = if max_moves = 0 then 0 else (Random.int (max_moves) +1) in 
-      (* Printf.printf "Take %d steps\n" steps; *)
       let new_coor = take_steps_in_dir coor steps dir in
-      (* let (x,y) = new_coor in Printf.printf "New coor (%d, %d )\n" x y;   *)
 
       (* if the current direction is different from prev_dir, the point has 
       taken a turn. We record the previous point in the corner list *)    
@@ -248,24 +221,21 @@ let generate_random_room (size : int) : room =
           then (new_coor, dir, new_corner_list)
           else make_following_moves new_coor dir new_corner_list false
     in 
-      (* print_endline "Making first move."; *)
+
       let (new_coor, dir, new_corner_list) = make_first_move () in
       if should_stop new_coor quad 
       then (new_coor, dir, new_corner_list)
       else 
-      ( (* (print_endline "Making following moves.";  *)
-      make_following_moves new_coor dir new_corner_list false)
+      make_following_moves new_coor dir new_corner_list false
   in
 
   let rec move_through_four_quadrants init_coor prev_dir corner_list num =
-    Printf.printf "Quadrant.(%d)\n" num;
     if num = 4
     then (init_coor, prev_dir, corner_list)
     else
     let quad = four_quadrants.(num) in
     let (new_coor, dir, new_corner_list) = move_in_quadrant init_coor prev_dir quad corner_list
     in 
-    let (x, y) = new_coor in Printf.printf "----- Final coor (%d, %d)\n" x y;
     move_through_four_quadrants new_coor dir new_corner_list (num + 1)
   
   in 
@@ -275,26 +245,25 @@ let generate_random_room (size : int) : room =
   let final_coor, last_dir, corner_list =
       move_through_four_quadrants initial_point Up [initial_point] 0
   in
+
     let final_corner_list =
-    if last_dir = Up
+    if final_coor = initial_point
     then corner_list
     else final_coor :: corner_list
   in 
-    let polygon_raw = polygon_of_int_pairs final_corner_list in
-    let polygon = relocate_starting_point polygon_raw size in
-    let output = BinaryEncodings.find_file "../../../resources/test.txt" in
-    write_polygons_to_file [polygon] output;
-    polygon_to_room polygon ;;
+  (*Convert corner list to polygon & shift (0,0) to a random but valid starting point *)
+    let polygon = polygon_of_int_pairs final_corner_list in
+    let polygon' = relocate_starting_point polygon in
+    let room = polygon_to_room polygon' in
 
-
-
-
+    room
 
 
 (* Define what it means to the room to be valid (e.g., no lacunas,
    obstacles, there is a place for initial Vroomba position, etc). *)
 
 (*RUI: A few checks:
+
 1. No lacunas: 
   In our implementation, drawing a lacuna will end up with edges extending out from 
   existing edges that not adjacent to it. So here we just need to check if edge intersect
@@ -303,83 +272,35 @@ let generate_random_room (size : int) : room =
   Same as above
 
 3. Initial place for Vroomba: O(1)
-  (0,0) must not be Outer
-  (1,1) must not be Outer
+  (0,0) must be cleanable (aka. is a tile)
+
 4. No diagonal edges: 
   Consecutive edges only run horiontally or vertically
   only change in x or y coordinate
   *this will throw error in polygon_to_room
-6. No straight lines :
-  3 consecutive edges on the same line are not allowed
-7. No collinear edges:
+
+5. No collinear edges:
   Check for non-collinearity while checking #1
-8. No "8" shaped rooms:
+
+6. No "8" shaped rooms:
   same checks as #1
    
 *)
 
 
-let point_to_coor (Point (x, y)) = 
-  (int_of_float x,int_of_float y)
-
-let coor_to_point (x,y)=
-  Point (float_of_int x, float_of_int y)
-
-(*RUI: input coordinates; output pos
-TODO: Change this for negative coordinates*)
-let get_pos room (x,y) =
-  room.map.(x).(y)
-
-let polygon_to_int_pairs polygon = 
-  let int_pairs = ref [] in 
-  List.iter (fun p -> 
-                    let (x,y) = point_to_coor p in 
-                    int_pairs := (x,y):: !int_pairs) 
-            polygon;
-  List.rev !int_pairs
-
-
-
 (* find the direction from point 1 to point 2*)
-
-
-let find_direction p1 p2 = 
-  let (x1, y1) = point_to_coor p1
-  and (x2, y2) = point_to_coor p2 in 
-  let (h, v) = ((x2 - x1), (y2 - y1)) in 
-  if h = 0 
-  then (if v = 0 then Stop else (if v>0 then Up else Down))
-  else 
-    (if h >0 
-    then (if v = 0 then Right else (if v>0 then Diagonal else Diagonal))
-    else (if v = 0 then Left else (if v>0 then Diagonal else Diagonal) ))
-
-let print_segment s = 
-  let p1, p2 = s in 
-  let (x1, y1) = point_to_coor p1 in 
-  let (x2, y2) = point_to_coor p2 in 
-  Printf.printf "segment (%d, %d), (%d, %d)\n" x1 y1 x2 y2 
-
-
-let print_segment_list l = 
-  List.iter (fun s -> print_segment s) l
-
-let on_straight_line s1 s2= 
-    let (p1, p2) = s1
-    and (p3, p4) = s2 in
-    let d1 = find_direction p2 p1
-    and d2 = find_direction p4 p3 in
-    d1 = d2
-
 
 let valid_room (r: room) : bool = 
   let polygon = room_to_polygon r in 
   let len = List.length !(r.edges) in
+
+  (* A room cannot have less than 4 edges *)
   if len <= 3 then false 
   else
+
   begin
 
-  (*get edge list in Point pairs *)
+  (*get edge list in (Point * Point) pairs *)
   let edge_list = Polygons.edges polygon in
   let edge_arr = list_to_array edge_list in
 
@@ -429,43 +350,26 @@ let valid_room (r: room) : bool =
     !res
   in
 
-    let no_straight_line = 
-      let res = ref true in 
-      let i = ref 0 in
-      (*check first to the second last segment*)
-      while !res && !i < len -1 do
-        let s1 = edge_arr.(!i)
-        and s2 = edge_arr.(!i+1) in
-        res := not (on_straight_line s1 s2);
-        i := !i + 1
-      done ;
-
-      (*check first and last segment*)
-      let first_seg = edge_arr.(0)
-      and last_seg = edge_arr.(len - 1) in 
-      res := not (on_straight_line first_seg last_seg) ;
-      !res
-  in
-
     let space_for_vroomba = 
-      get_pos r (0, 0) != Outer && get_pos r (1, 1) != Outer
-
-  in no_intersect_or_collinear && no_straight_line && space_for_vroomba
+      cleanable r (0,0)
+  in 
+  no_intersect_or_collinear && space_for_vroomba
 end
-
-
-
-
 
 (*********************************************)
 (*                     Tests                 *)
 (*********************************************)
 
 
-(* let%test "Generated room is valid" = 
-  let r = generate_random_room 100 in
-  valid_room r *)
 
+let%test "Generated room is valid" = 
+
+  for _ = 0 to 20 do
+    let size = 2 + Random.int 49 in
+    let r = generate_random_room size in
+    assert (valid_room r)
+  done;
+  true
 
 (* TODO: add more tests *)
 let%test "test_valid_room_simple" = 
@@ -476,8 +380,7 @@ let%test "test_valid_room_simple" =
                     valid_room room) 
   polygon_list
 
-(* (0, 0); (0, 2); (-2, 2); (-2, -3); (3, -3); (3, 0)
-(0, 0); (4, 0); (4, 4); (0, 4); (0, 0); (-4, 0); (-4, -4); (0, -4) *)
+
 let%test "test_valid_room_simple_negative" = 
   let input  = BinaryEncodings.find_file "../../../resources/invalid.txt" in
   let polygon_list = file_to_polygons input in

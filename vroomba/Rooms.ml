@@ -40,7 +40,8 @@ type pos =
 
 type room = {
   map : (pos array) array;
-  edges : (int * int) list ref
+  edges : (int * int) list ref;
+  shift : (int * int) ref
 }
 
 let mk_room size =
@@ -50,7 +51,8 @@ let mk_room size =
   done;
   map.(0).(0) <- Edge;
   { map = map;
-    edges = ref [(0, 0)]
+    edges = ref [(0, 0)];
+    shift = ref (0, 0)
   }
 
 (* let string_to_polygon_2 (s : string) : polygon option =
@@ -221,22 +223,39 @@ let fill_room_2 map edges =
 
 (*  Convert a polygon to a room data type  *)
 let polygon_to_room (p: polygon) : room =
-  (* TODO: get float list that starts from (0, 0) *)
-  (* In case polygons don't start with (0,0) *)
-  
-  
-  (* create room based on list *)
-  let size = ref 0 in
+  (* get information about the polygon *)
+  let pos_x = ref 0 in
+  let pos_y = ref 0 in
+  let neg_x = ref 0 in
+  let neg_y = ref 0 in
   let ls = ref [] in
   List.iter (fun e ->
       let x = int_of_float @@ get_x e in
       let y = int_of_float @@ get_y e in
-      if x > !size then size := x
-      else if y > !size then size := y;
+      
+      (* get room size with max/min coordinates *)
+      if x > !pos_x then pos_x := x;
+      if y > !pos_y then pos_y := y;
+      
+      (* and get shift values for negative coordinates *)
+      if x < !neg_x then neg_x := x;
+      if y < !neg_y then neg_y := y;
+
+      (* get int coordinates of float pairs *)
       ls := (x, y) :: !ls) p;
-  let r = mk_room (!size + 1) in
+
+  (* create room based on coordinate list *)
+  let range_x = !pos_x - !neg_x in
+  let range_y = !pos_y - !neg_y in
+  let r = mk_room (1 + max range_x range_y) in
   r.edges := (List.rev !ls);
-  fill_edges r.map !(r.edges);
+  if !neg_x < 0 || !neg_y < 0
+  then begin
+    let ls' = List.map (fun (x, y) -> (x - !neg_x, y - !neg_y)) !ls in
+    fill_edges r.map ls';
+    r.shift := (!neg_x, !neg_y)
+  end
+  else fill_edges r.map !(r.edges);
   fill_room r.map;
   r
 
@@ -245,10 +264,10 @@ let room_to_polygon (r: room) : polygon =
   polygon_of_int_pairs !(r.edges)
 
 
-(*test*)
+(* Tests *)
 
 
-let%test "test_file_to_polygon&write_polygons_to_file" = 
+let%test "test file_to_polygon & write_polygons_to_file" = 
   let input  = BinaryEncodings.find_file "../../../resources/rooms.txt" in
   let output = "test.tmp" in
   let string = ReadingFiles.read_file_to_strings input in 
@@ -258,7 +277,7 @@ let%test "test_file_to_polygon&write_polygons_to_file" =
   Sys.remove output;
   string = string'
 
-let%test "test_polygon_to_room&room_to_polygon" = 
+let%test "test polygon_to_room & room_to_polygon" = 
   let input  = BinaryEncodings.find_file "../../../resources/basic.txt" in
   let polygon_list = file_to_polygons input in
   List.for_all (fun p -> 
@@ -267,7 +286,7 @@ let%test "test_polygon_to_room&room_to_polygon" =
                     p = p') 
   polygon_list
 
-let%test "test_polygon_to_room&room_to_polygon_negative" = 
+let%test "test polygon_to_room & room_to_polygon negative" = 
   let input  = BinaryEncodings.find_file "../../../resources/invalid.txt" in
   let polygon_list = file_to_polygons input in
   List.for_all (fun p -> 

@@ -25,56 +25,264 @@ SOFTWARE.
 
 open Util
 open Rooms
-open RoomChecker
+include RoomChecker
 open RoomGenerator
 
+open RoomUtil
+open BetterHashTable
 open Graphs
 open LinkedGraphs
-open NodeTable
 
 (*********************************************)
 (*              Room solver                  *)
 (*********************************************)
+
+module CoorTable =
+  ResizableListBasedHashTable(struct type t = (int * int) end)
 
 (* This is a complex task. Feel free to introduce whatever functions
    and data types you consider necessary, and also rely on data
    structures and algorithms from the lectures (see folder `lib` of
    this project). *)
 
-type color = White | Black (* for moving places? *)
-             
-type state = {
-  current : int * int ref;
-  graph : (int * int, int) graph;
-  table : ((int * int) * color) hash_table (* Alternatively, new graph struct? 
-                                            * Want hashtable for easy access to 
-                                            * movable coordinates, since node_id
-                                            * doesn't provide much info *)
-}
+let get_pos_map_index r (x, y) =
+  let map = r.map in
+  map.(x).(y)
+
+let inside_room r coor : bool =
+  let (x, y) = coor in
+  if get_pos_map_index r (x, y) = Outer
+  then false
+  else begin
+    (get_pos_map_index r (x + 1, y) != Outer &&
+     get_pos_map_index r (x, y + 1) != Outer &&
+     get_pos_map_index r (x + 1, y + 1) != Outer)
+  end
+
+let movable_coords r =
+  let ls = ref [] in
+  let map = r.map in
+  let len = Array.length map in
+  for x = 0 to len - 2 do
+    for y = 0 to len - 2 do
+      if inside_room r (x, y)
+      then ls := (map_index_to_coor r (x, y)) :: !ls
+    done
+  done;
+  List.rev !ls
+
+let reachable' state coor neighbor = 
+  let (a, b) = coor in 
+  let (c, d) = neighbor in
+  let (dx, dy) = (c - a, d - b) in
+  let ht = state.table in
+
+  (* the neighbor is in the room *)
+  let op = HygieneTable.get ht neighbor in
+  op != None &&
+
+  begin
+    (* the neighbor is next-door -> reachable *)
+    ((abs dx = 1 && dy = 0) || (dx = 0 && abs dy = 1)) ||
+    (* the neighbor is diagonal to current tile *)
+    begin 
+      (HygieneTable.get ht (a, d) != None) &&
+      (HygieneTable.get ht (c, b) != None)
+    end
+  end
+  
+let clean state curr =
+  clean_a_tile state curr;
+  let neighbors = get_eight_neighbors curr in
+  let ht = state.table in
+  List.iter (fun coor ->
+      let op = HygieneTable.get ht coor in
+      if op != None
+      then (if reachable' state curr coor
+            then clean_a_tile state coor)
+    ) neighbors
+
+let init_state r =
+  let ls = movable_coords r in
+  let num = List.length ls in
+  let ht = HygieneTable.mk_new_table num in
+  List.iter (fun coor -> HygieneTable.insert ht coor Dirty) ls;
+  let start = (0, 0) in
+  let state = 
+    { current = ref start;
+      table = ht;
+      dirty_tiles = ref num } in
+  clean state start;
+  state
+    
+let get_id ct coor =
+  CoorTable.get ct coor
+
+let add_edges g ct coor =
+  let add_edge src dst_op =
+    if dst_op != None
+    then (let dst = get_exn dst_op in
+          add_edge g src dst;
+          set_edge_label g src dst 1) in
+  let (x, y) = coor in
+  let id = get_exn @@ get_id ct coor in
+  let up = get_id ct (x, y + 1) in
+  let left = get_id ct (x - 1, y) in
+  let down = get_id ct (x, y - 1) in
+  let right = get_id ct (x + 1, y) in
+  add_edge id up;
+  add_edge id left;
+  add_edge id down;
+  add_edge id right
+
+let create_graph r =
+  let g = mk_graph () in
+  let ls = movable_coords r in
+  let ct = CoorTable.mk_new_table (List.length ls) in
+  List.iter (fun coor ->
+      CoorTable.insert ct coor !(g.next_node_id);
+      add_node g coor) ls;
+  List.iter (fun coor -> add_edges g ct coor) ls;
+  (g, ct)
+  
+    
+let moves_to_string ls =
+  let buffer = Buffer.create 1 in
+  List.iter (fun m -> Buffer.add_string buffer (pp_move m)) ls;
+  Buffer.contents buffer
+
 
 (* Solve the room and produce the list of moves. *)
 (* Make use of RoomChecker.state state type internally in your solver *)
 let solve_room (r: room) : move list =
-  (* TODO: CREATING A GRAPH
-   * find all coordinates in the room the vroomba can move to,
-   * add nodes for all these coordinates, along with edge label of 1
-   * create edges for all possible moves, found with hash_table *)
-
-
-  (* TODO: DFS & BACKTRACKING *)
-
+  let (g, ct) = create_graph r in
+  let state = init_state r in
+  let ht = state.table in
+  let moves = ref [] in
+  let init_coor = get_exn @@ get_id ct !(state.current) in
+  let get_coor g id = get_value @@ get_node g id in
   
-  error "Implement me!"
+  let rec check_hygiene ls =
+    match ls with
+    | [] -> None
+    | h :: tl ->
+      let coor = get_coor g h in
+      let is_cleaned = get_exn @@ HygieneTable.get ht coor in
+      if is_cleaned = Dirty
+      then Some h
+      else check_hygiene tl
+  in 
+  
+  (* TODO: DFS & BACKTRACKING *)
+  let rec dfs_visit id =
+    clean state (get_coor g id);
+    if !(state.dirty_tiles) = 0
+    then List.rev !moves
+    else begin
+      let new_move = ref true in
+      let rec walk_succ_ls id_walk succ_ls ls_moved =
+        if !(state.dirty_tiles) = 0
+        then List.rev !moves
+        else begin
+          let (x, y) = get_coor g id_walk in
+          match succ_ls with
+          | [] ->
+            if !new_move = true
+            then (new_move := false; backtrack !moves id_walk)
+            else backtrack ls_moved id_walk
+          | h :: tl ->
+            let succ_succ_ls = get_succ g h in
+            (* tried checking for 8 neighbors here instead but overflowed *)
+            let next_move_op = check_hygiene succ_succ_ls in
+            if next_move_op = None
+            then walk_succ_ls id_walk tl ls_moved 
+            else begin
+              new_move := true;
+              let (x', y') = get_coor g h in
+              if x = x' && y + 1 = y' then moves := RoomChecker.Up :: !moves
+              else if x - 1 = x' && y = y' then moves := Left :: !moves
+              else if x = x' && y - 1 = y' then moves := Down :: !moves
+              else if x + 1 = x' && y = y' then moves := Right :: !moves
+              else error "Invalid move??";
+              dfs_visit h
+            end
+        end
+      and backtrack ls_moved id_bk =
+        if !(state.dirty_tiles) = 0
+        then List.rev !moves
+        else begin
+          match ls_moved with
+          | [] ->
+            (Printf.printf "Moves: %s \n" (moves_to_string (List.rev !moves));
+             Printf.printf "Tiles left: %d \n" !(state.dirty_tiles);
+             error "Unsolvable room!")
+          | h :: tl ->
+            let (x, y) = get_coor g id_bk in
+            let (coor', rev_move) = match h with
+              | RoomChecker.Up -> ((x, y - 1), RoomChecker.Down)
+              | Left -> ((x + 1, y), Right)
+              | Down -> ((x, y + 1), Up)
+              | Right -> ((x - 1, y), Left) in
+            moves := rev_move :: !moves;
+            if get_id ct coor' = None
+            then (let (x', y') = coor' in
+                  Printf.printf "Moved from: (%d, %d); \nMoveto: (%d, %d) \n"
+                    x y x' y';
+                  Printf.printf "Moves: %s \n"
+                    (moves_to_string (List.rev !moves)));
+            let id' = get_exn @@ get_id ct coor' in
+            let succ_ls' = get_succ g id' in
+            walk_succ_ls id' succ_ls' tl
+        end
+      in let succ_ls = get_succ g id in
+      walk_succ_ls id succ_ls []
+    end
+  in dfs_visit init_coor
+
+
 
 (*********************************************)
 (*               Testing                     *)
 (*********************************************)
 
-(*
+let%test "Basic room solver testing 1" =
+  let ls = [(0, 0); (6, 0); (6, 1); (8, 1); (8, 2); (6, 2); (6, 3); (0, 3)] in
+  let r = Polygons.polygon_of_int_pairs ls |> polygon_to_room in
+  let moves = solve_room r in
+  check_solution r moves
+
+let%test "Basic room solver testing 2" =
+  let ls = [(0, 0); (2, 0); (2, 2); (0, 2)] in
+  let r = Polygons.polygon_of_int_pairs ls |> polygon_to_room in
+  let moves = solve_room r in
+  check_solution r moves && moves = []
+
+let%test "Basic room solver testing 3" =
+  let ls = [(0, 0); (1, 0); (1, 1); (2, 1); (2, 2); (0, 2)] in
+  let r = Polygons.polygon_of_int_pairs ls |> polygon_to_room in
+  let moves = solve_room r in
+  check_solution r moves
+
+let%test "Basic room solver testing with rooms.txt" =
+  let input  = BinaryEncodings.find_file "../../../resources/rooms.txt" in
+  let polygon_list = file_to_polygons input in
+  List.for_all (fun p ->
+      let r = polygon_to_room p in
+      let moves = solve_room r in
+      check_solution r moves) polygon_list
+
 let%test "Randomised solver testing" = 
   let r = generate_random_room 30 in
   let moves = solve_room r in
+  Printf.printf "Moves: %s \n"
+    (moves_to_string moves);
   check_solution r moves
- *)
+
+let%test "Randomised solver testing 2" = 
+  let r = generate_random_room 10 in
+  let moves = solve_room r in
+  Printf.printf "Moves: %s \n"
+    (moves_to_string moves);
+  check_solution r moves
 
 (* TODO: Add more tests *)
