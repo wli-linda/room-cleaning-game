@@ -68,16 +68,50 @@ let movable_coords r =
   done;
   !ls
 
+let reachable' state coor neighbor = 
+  let (a, b) = coor in 
+  let (c, d) = neighbor in
+  let (dx, dy) = (c - a, d - b) in
+  let ht = state.table in
+
+  (* the neighbor is in the room *)
+  let op = HygieneTable.get ht neighbor in
+  op != None &&
+
+  begin
+    (* the neighbor is next-door -> reachable *)
+    ((abs dx = 1 && dy = 0) || (dx = 0 && abs dy = 1)) ||
+    (* the neighbor is diagonal to current tile *)
+    begin 
+      (HygieneTable.get ht (a, d) != None) &&
+      (HygieneTable.get ht (c, b) != None)
+    end
+  end
+  
+let clean state curr =
+  clean_a_tile state curr;
+  let neighbors = get_eight_neighbors curr in
+  let ht = state.table in
+  List.iter (fun coor ->
+      let op = HygieneTable.get ht coor in
+      if op != None
+      then (if reachable' state curr coor
+            then clean_a_tile state coor)
+    ) neighbors
+
 let init_state r =
   let ls = movable_coords r in
   let num = List.length ls in
   let ht = HygieneTable.mk_new_table num in
   List.iter (fun coor -> HygieneTable.insert ht coor Dirty) ls;
   let start = (0, 0) in
-  { current = ref start;
-    table = ht;
-    dirty_tiles = ref num }
-
+  let state = 
+    { current = ref start;
+      table = ht;
+      dirty_tiles = ref num } in
+  clean state start;
+  state
+    
 let get_id ct coor =
   CoorTable.get ct coor
 
@@ -106,21 +140,41 @@ let create_graph r =
       CoorTable.insert ct coor !(g.next_node_id);
       add_node g coor) ls;
   List.iter (fun coor -> add_edges g ct coor) ls;
-  g
-
+  (g, ct)
+  
+  
 (* Solve the room and produce the list of moves. *)
 (* Make use of RoomChecker.state state type internally in your solver *)
 let solve_room (r: room) : move list =
-  (* TODO: CREATING A GRAPH
-   * find all coordinates in the room the vroomba can move to,
-   * add nodes for all these coordinates, along with edge label of 1
-   * create edges for all possible moves, found with hash_table *)
-
-
-  (* TODO: DFS & BACKTRACKING *)
-
+  let (g, ct) = create_graph r in
+  let state = init_state r in
+  let ht = state.table in
+  let ls = ref [] in
   
-  error "Implement me!"
+  let get_coor g id =
+    get_value @@ get_node g id
+  in
+  
+  (* TODO: DFS & BACKTRACKING *)
+  let rec dfs_visit id ls =
+    let (x, y) = get_coor g id in
+    clean state (x, y);
+    get_succ g id |> List.iter (fun v ->
+        get_succ g v |> List.iter (fun v' ->
+            let v'_coor = get_coor g v' in
+            let v'_cleaned = get_exn @@ HygieneTable.get ht v'_coor in
+            if v'_cleaned = Dirty
+            then begin
+              let (x', y') = get_coor g v in
+              if x = x' && y + 1 = y' then ls := RoomChecker.Up :: !ls
+              else if x - 1 = x' && y = y' then ls := Left :: !ls
+              else if x = x' && y - 1 = y' then ls := Down :: !ls
+              else if x + 1 = x' && y = y' then ls := Right :: !ls;
+              dfs_visit v ls
+            end));
+  in
+  dfs_visit (get_exn @@ get_id ct !(state.current)) ls;
+  List.rev !ls
 
 (*********************************************)
 (*               Testing                     *)
