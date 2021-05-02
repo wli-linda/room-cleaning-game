@@ -151,8 +151,8 @@ let get_all_tiles room =
   let tiles = ref [] in
   let map = room.map in
   let len = Array.length map in
-  for x = 0 to len - 2 do 
-    for y = 0 to len - 2 do 
+  for x = 0 to len - 1 do 
+    for y = 0 to len - 1 do 
       let coor = map_index_to_coor room (x,y) in
       if cleanable room coor 
       then tiles := coor :: !tiles
