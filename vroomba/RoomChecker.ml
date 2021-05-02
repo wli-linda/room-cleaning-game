@@ -71,9 +71,9 @@ type state = {
 
 let initiate_state room =
   let num = get_tiles_num room in
-  let all_points = get_all_points room in
+  let all_tiles = get_all_tiles room in
   let ht = HygieneTable.mk_new_table num in
-  List.iter (fun coor -> HygieneTable.insert ht coor Dirty) all_points;
+  List.iter (fun coor -> HygieneTable.insert ht coor Dirty) all_tiles;
   let starting_point = (0,0) in
   { 
     current  = ref starting_point;
