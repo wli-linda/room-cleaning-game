@@ -45,15 +45,18 @@ module CoorTable =
    structures and algorithms from the lectures (see folder `lib` of
    this project). *)
 
+let get_pos_map_index r (x, y) =
+  let map = r.map in
+  map.(x).(y)
+
 let inside_room r coor : bool =
   let (x, y) = coor in
-  let left_bottom = get_pos r (x, y) in
-  if left_bottom = Outer
+  if get_pos_map_index r (x, y) = Outer
   then false
   else begin
-    (get_pos r (x + 1, y) != Outer &&
-     get_pos r (x, y + 1) != Outer &&
-     get_pos r (x + 1, y + 1) != Outer)
+    (get_pos_map_index r (x + 1, y) != Outer &&
+     get_pos_map_index r (x, y + 1) != Outer &&
+     get_pos_map_index r (x + 1, y + 1) != Outer)
   end
 
 let movable_coords r =
@@ -63,7 +66,7 @@ let movable_coords r =
   for x = 0 to len - 2 do
     for y = 0 to len - 2 do
       if inside_room r (x, y)
-      then ls := (x, y) :: !ls
+      then ls := (map_index_to_coor r (x, y)) :: !ls
     done
   done;
   List.rev !ls
@@ -172,11 +175,11 @@ let solve_room (r: room) : move list =
   
   (* TODO: DFS & BACKTRACKING *)
   let rec dfs_visit id =
+    clean state (get_coor g id);
     if !(state.dirty_tiles) = 0
     then List.rev !moves
     else begin
       let new_move = ref true in
-      clean state (get_coor g id);
       let rec walk_succ_ls id_walk succ_ls ls_moved =
         if !(state.dirty_tiles) = 0
         then List.rev !moves
@@ -189,6 +192,7 @@ let solve_room (r: room) : move list =
             else backtrack ls_moved id_walk
           | h :: tl ->
             let succ_succ_ls = get_succ g h in
+            (* tried checking for 8 neighbors here instead but overflowed *)
             let next_move_op = check_hygiene succ_succ_ls in
             if next_move_op = None
             then walk_succ_ls id_walk tl ls_moved 
@@ -258,6 +262,14 @@ let%test "Basic room solver testing 3" =
   let r = Polygons.polygon_of_int_pairs ls |> polygon_to_room in
   let moves = solve_room r in
   check_solution r moves
+
+let%test "Basic room solver testing with rooms.txt" =
+  let input  = BinaryEncodings.find_file "../../../resources/rooms.txt" in
+  let polygon_list = file_to_polygons input in
+  List.for_all (fun p ->
+      let r = polygon_to_room p in
+      let moves = solve_room r in
+      check_solution r moves) polygon_list
 
 let%test "Randomised solver testing" = 
   let r = generate_random_room 30 in
