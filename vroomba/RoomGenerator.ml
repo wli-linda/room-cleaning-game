@@ -27,7 +27,7 @@ open Util
 open Rooms
 open Polygons
 open ArrayUtil
-open RoomUtil
+open RoomUtil 
 (*********************************************)
 (*       Automated generation of rooms       *)
 (*********************************************)
@@ -154,25 +154,14 @@ let take_steps_in_dir coor steps dir =
   | _ -> error "Invalid direction."  
 
 (* relocate (0,0) along x or y axis. shift the whole polygon *)
-let relocate_starting_point polygon size= 
-  let half = size / 2 in
-  let half' = size - half in
-  (*choose which quadrant to relocate (0,0) to*)
-  let pick_quadrant = four_quadrants.(Random.int(4)) in 
-  let ((x_min, x_max), (y_min, y_max)) =  
-      match pick_quadrant with
-        | First -> (- half, -1) , (0, 0)
-        | Second -> (0, 0 ) , (0, half - 1)
-        | Third -> (0, half' -1), (-1, -1)
-        | Fourth -> (-1, -1), (- half', -1) 
-  in 
-  (* Printf.printf "pick x from %d\n" (x_max - x_min + 1); *)
-  (* Printf.printf "pick y from %d\n" (y_max - y_min + 1);  *)
-  let pick_x = Random.int(x_max - x_min + 1) + x_min in
-  let pick_y = Random.int(y_max - y_min + 1) + y_min in
-  let (dx, dy) = (float_of_int pick_x), (float_of_int pick_y) in
-  shift_polygon (dx, dy) polygon ;;
-
+let relocate_starting_point polygon = 
+  let p = polygon_to_int_pairs polygon in
+  let room = polygon_to_room polygon in
+  let tiles = get_all_tiles room in
+  let len = List.length tiles in
+  let (x,y) = List.nth tiles (Random.int len) in
+  let polygon' = List.map (fun (a, b) -> (a - x, b - y)) p in
+  polygon_of_int_pairs polygon'
 
 let generate_random_room (size : int) : room = 
 
@@ -266,11 +255,11 @@ let generate_random_room (size : int) : room =
     else final_coor :: corner_list
   in 
   (*Convert corner list to polygon & shift (0,0) to a random but valid starting point *)
-    let polygon_raw = polygon_of_int_pairs final_corner_list in
-    let polygon = relocate_starting_point polygon_raw size in
-    let output = BinaryEncodings.find_file "../../../resources/test.txt" in
-    write_polygons_to_file [polygon] output;
-    polygon_to_room polygon ;;
+    let polygon = polygon_of_int_pairs final_corner_list in
+    let polygon' = relocate_starting_point polygon in
+    let room = polygon_to_room polygon' in
+
+    room
 
 
 (* Define what it means to the room to be valid (e.g., no lacunas,
@@ -293,13 +282,10 @@ let generate_random_room (size : int) : room =
   only change in x or y coordinate
   *this will throw error in polygon_to_room
 
-6. No straight lines :
-  3 consecutive edges on the same line are not allowed
-
-7. No collinear edges:
+5. No collinear edges:
   Check for non-collinearity while checking #1
 
-8. No "8" shaped rooms:
+6. No "8" shaped rooms:
   same checks as #1
    
 *)
@@ -367,35 +353,10 @@ let valid_room (r: room) : bool =
     !res
   in
 
-    let no_straight_line = 
-      let res = ref true in 
-      let i = ref 0 in
-      (*check first to the second last segment*)
-      while !res && !i < len -1 do
-        let s1 = edge_arr.(!i)
-        and s2 = edge_arr.(!i+1) in
-        res := not (on_straight_line s1 s2);
-        i := !i + 1
-      done ;
-
-      (*check first and last segment*)
-      let first_seg = edge_arr.(0)
-      and last_seg = edge_arr.(len - 1) in 
-      res := not (on_straight_line first_seg last_seg) ;
-      !res
-  in
-
     let space_for_vroomba = 
       cleanable r (0,0)
-
   in 
-  if not no_intersect_or_collinear
-  then print_endline "Found intersection or collinear";
-  if not no_straight_line
-  then print_endline "Found straight line";
-  if not space_for_vroomba
-  then print_endline "No space for vroomba"; 
-  no_intersect_or_collinear && no_straight_line && space_for_vroomba
+  no_intersect_or_collinear && space_for_vroomba
 end
 
 (*********************************************)
@@ -403,13 +364,14 @@ end
 (*********************************************)
 
 
-(* let%test "Generated room is valid" = 
-  (* for i = 0 to 100 do *)
-    let size = 2 + Random.int 500 in
+let%test "Generated room is valid" = 
+
+  for _ = 0 to 20 do
+    let size = 2 + Random.int 49 in
     let r = generate_random_room size in
-    valid_room r
-    (* done; *)
-  (* true *) *)
+    assert (valid_room r)
+  done;
+  true
 
 
 (* TODO: add more tests *)
@@ -421,13 +383,7 @@ let%test "test_valid_room_simple" =
                     valid_room room) 
   polygon_list
 
-(*  To be tested:
 
-(0, 0); (0, 2); (-2, 2); (-2, -3); (3, -3); (3, 0)
-(0, 0); (4, 0); (4, 4); (0, 4); (0, 0); (-4, 0); (-4, -4); (0, -4) 
-(0, 0); (0, 1); (1, 1); (2, 1); (2, 2); (-1, 2); (-1, 0)
-*)
-(* 
 let%test "test_valid_room_simple_negative" = 
   let input  = BinaryEncodings.find_file "../../../resources/invalid.txt" in
   let polygon_list = file_to_polygons input in
@@ -436,4 +392,4 @@ let%test "test_valid_room_simple_negative" =
                     try (let room = polygon_to_room p in  
                     not (valid_room room))
                     with Failure _ -> true) 
-  polygon_list *)
+  polygon_list

@@ -99,24 +99,6 @@ let get_all_points room =
   done;
   !all_points
 
- (* get the number of tiles in the room *)
-let get_tiles_num room : int = 
-  let tiles = ref 0 in
-  let map = room.map in
-  let len = Array.length map in
-  for x = 0 to len - 2 do 
-    for y = 0 to len - 2 do 
-      let p1 = map.(x).(y) in 
-      let p2 = map.(x).(y + 1) in 
-      let p3 = map.(x + 1).(y) in 
-      let p4 = map.(x + 1).(y + 1) in
-      if p1 != Outer && p2 != Outer && 
-        p3 != Outer && p4 != Outer
-      then tiles := !tiles + 1
-    done;
-  done;
-  !tiles
-
 
 (*retrieve the coordinates of the points in the same tile*)
 let get_three_neighbors (x, y) = 
@@ -163,6 +145,25 @@ let cleanable room coor : bool =
                   let np = get_pos room n 
                     in not (np = Outer)  ) 
                neighbours
+
+(*get the coordinates of all tiles*)
+let get_all_tiles room =
+  let tiles = ref [] in
+  let map = room.map in
+  let len = Array.length map in
+  for x = 0 to len - 1 do 
+    for y = 0 to len - 1 do 
+      let coor = map_index_to_coor room (x,y) in
+      if cleanable room coor 
+      then tiles := coor :: !tiles
+    done;
+  done;
+  !tiles
+
+ (* get the number of tiles in the room *)
+let get_tiles_num room =
+  let tiles = get_all_tiles room in
+  List.length tiles
 
 (* is a neighbor tile reachable from the current tile
 

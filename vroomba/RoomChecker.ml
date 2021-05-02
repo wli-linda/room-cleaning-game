@@ -71,9 +71,9 @@ type state = {
 
 let initiate_state room =
   let num = get_tiles_num room in
-  let all_points = get_all_points room in
+  let all_tiles = get_all_tiles room in
   let ht = HygieneTable.mk_new_table num in
-  List.iter (fun coor -> HygieneTable.insert ht coor Dirty) all_points;
+  List.iter (fun coor -> HygieneTable.insert ht coor Dirty) all_tiles;
   let starting_point = (0,0) in
   { 
     current  = ref starting_point;
@@ -245,7 +245,7 @@ let%test "test_checker_basic_negative" =
   let room = string_to_polygon s |> get_exn |> polygon_to_room in
   not (validate room "WWWWDDDDD") &&
   not (validate room "WWDDAD")
-(* 
+
 let%test "test_checker_rooms_negative" = 
   let input  = BinaryEncodings.find_file "../../../resources/rooms.txt" in
   let polygon_list = file_to_polygons input in
@@ -264,4 +264,4 @@ let%test "test_checker_rooms_negative" =
 
 let%test "test_checker_random_negative" = 
   let room = generate_random_room 100 in
-  not (validate room "W") *)
+  not (validate room "W")
