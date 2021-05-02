@@ -172,53 +172,68 @@ let solve_room (r: room) : move list =
   
   (* TODO: DFS & BACKTRACKING *)
   let rec dfs_visit id =
-    let new_move = ref true in
-    clean state (get_coor g id);
-    let rec walk_succ_ls id_walk succ_ls ls_moved =
-      let (x, y) = get_coor g id_walk in
-      match succ_ls with
-      | [] ->
-        if !new_move = true
-        then (new_move := false; backtrack !moves id_walk)
-        else backtrack ls_moved id_walk
-      | h :: tl ->
-        let succ_succ_ls = get_succ g h in
-        let next_move_op = check_hygiene succ_succ_ls in
-        if next_move_op = None
-        then walk_succ_ls id_walk tl ls_moved 
+    if !(state.dirty_tiles) = 0
+    then List.rev !moves
+    else begin
+      let new_move = ref true in
+      clean state (get_coor g id);
+      let rec walk_succ_ls id_walk succ_ls ls_moved =
+        if !(state.dirty_tiles) = 0
+        then List.rev !moves
         else begin
-          new_move := true;
-          let (x', y') = get_coor g h in
-          if x = x' && y + 1 = y' then moves := RoomChecker.Up :: !moves
-          else if x - 1 = x' && y = y' then moves := Left :: !moves
-          else if x = x' && y - 1 = y' then moves := Down :: !moves
-          else if x + 1 = x' && y = y' then moves := Right :: !moves
-          else error "Invalid move??";
-          dfs_visit h
+          let (x, y) = get_coor g id_walk in
+          match succ_ls with
+          | [] ->
+            if !new_move = true
+            then (new_move := false; backtrack !moves id_walk)
+            else backtrack ls_moved id_walk
+          | h :: tl ->
+            let succ_succ_ls = get_succ g h in
+            let next_move_op = check_hygiene succ_succ_ls in
+            if next_move_op = None
+            then walk_succ_ls id_walk tl ls_moved 
+            else begin
+              new_move := true;
+              let (x', y') = get_coor g h in
+              if x = x' && y + 1 = y' then moves := RoomChecker.Up :: !moves
+              else if x - 1 = x' && y = y' then moves := Left :: !moves
+              else if x = x' && y - 1 = y' then moves := Down :: !moves
+              else if x + 1 = x' && y = y' then moves := Right :: !moves
+              else error "Invalid move??";
+              dfs_visit h
+            end
         end
-    and backtrack ls_moved id_bk =
-      match ls_moved with
-      | [] -> error "Unsolvable room!"
-      | h :: tl ->
-        let (x, y) = get_coor g id_bk in
-        let (coor', rev_move) = match h with
-          | RoomChecker.Up -> ((x, y - 1), Down)
-          | Left -> ((x + 1, y), Right)
-          | Down -> ((x, y + 1), Up)
-          | Right -> ((x - 1, y), Left) in
-        moves := h :: !moves;
-        if get_id ct coor' = None
-        then (let (x', y') = coor' in
-              Printf.printf "Moved from: (%d, %d); \nMoveto: (%d, %d) \n"
-                x y x' y';
-             Printf.printf "Moves: %s \n" (moves_to_string !moves));
-        let id' = get_exn @@ get_id ct coor' in
-        let succ_ls' = get_succ g id' in
-        walk_succ_ls id' succ_ls' tl
-    in let succ_ls = get_succ g id in
-    walk_succ_ls id succ_ls []
-  in dfs_visit init_coor;
-  List.rev !moves
+      and backtrack ls_moved id_bk =
+        if !(state.dirty_tiles) = 0
+        then List.rev !moves
+        else begin
+          match ls_moved with
+          | [] ->
+            (Printf.printf "Moves: %s \n" (moves_to_string (List.rev !moves));
+             Printf.printf "Tiles left: %d \n" !(state.dirty_tiles);
+             error "Unsolvable room!")
+          | h :: tl ->
+            let (x, y) = get_coor g id_bk in
+            let (coor', rev_move) = match h with
+              | RoomChecker.Up -> ((x, y - 1), RoomChecker.Down)
+              | Left -> ((x + 1, y), Right)
+              | Down -> ((x, y + 1), Up)
+              | Right -> ((x - 1, y), Left) in
+            moves := rev_move :: !moves;
+            if get_id ct coor' = None
+            then (let (x', y') = coor' in
+                  Printf.printf "Moved from: (%d, %d); \nMoveto: (%d, %d) \n"
+                    x y x' y';
+                  Printf.printf "Moves: %s \n"
+                    (moves_to_string (List.rev !moves)));
+            let id' = get_exn @@ get_id ct coor' in
+            let succ_ls' = get_succ g id' in
+            walk_succ_ls id' succ_ls' tl
+        end
+      in let succ_ls = get_succ g id in
+      walk_succ_ls id succ_ls []
+    end
+  in dfs_visit init_coor
 
 
 
