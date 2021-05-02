@@ -172,6 +172,13 @@ let solve_room (r: room) : move list =
       then Some h
       else check_hygiene tl
   in 
+
+  let get_diag_neighbors (x, y) =
+    [(x + 1, y + 1);
+     (x + 1, y - 1);
+     (x - 1, y + 1);
+     (x - 1, y - 1)]
+  in
   
   (* TODO: DFS & BACKTRACKING *)
   let rec dfs_visit id =
@@ -191,14 +198,23 @@ let solve_room (r: room) : move list =
             then (new_move := false; backtrack !moves id_walk)
             else backtrack ls_moved id_walk
           | h :: tl ->
-            let succ_succ_ls = get_succ g h in
-            (* tried checking for 8 neighbors here instead but overflowed *)
-            let next_move_op = check_hygiene succ_succ_ls in
-            if next_move_op = None
+            let coor = get_coor g h in
+            if get_exn @@ HygieneTable.get ht coor = Clean &&
+               (let succ_succ_ls = get_succ g h in
+                let op = check_hygiene succ_succ_ls in
+                op = None) &&
+               (let neighbors = get_diag_neighbors coor in
+                let neighbors_ls = ref [] in
+                List.iter (fun c -> let op = get_id ct c in
+                            if op != None
+                            then neighbors_ls := get_exn op :: !neighbors_ls
+                          ) neighbors;
+                let next_move_op = check_hygiene !neighbors_ls in
+                next_move_op = None)
             then walk_succ_ls id_walk tl ls_moved 
             else begin
               new_move := true;
-              let (x', y') = get_coor g h in
+              let (x', y') = coor in
               if x = x' && y + 1 = y' then moves := RoomChecker.Up :: !moves
               else if x - 1 = x' && y = y' then moves := Left :: !moves
               else if x = x' && y - 1 = y' then moves := Down :: !moves
