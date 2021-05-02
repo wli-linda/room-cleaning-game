@@ -12,17 +12,18 @@ let point_to_coor (Point (x, y)) =
 let coor_to_point (x,y)=
   Point (float_of_int x, float_of_int y)
 
-(*RUI: input coordinates; output pos
-TODO: Change this for negative coordinates*)
-let get_pos room (x,y) =
-  room.map.(x).(y)
-
 (* convert coordinates to room.map indices *)
 let coor_to_map_index room (x,y) = 
-  (x, y)
+  let (minx, miny) = !(room.shift) in
+  (x - minx, y - miny)
 
 let map_index_to_coor room (x,y)  = 
-  (x, y)
+  let (minx, miny) = !(room.shift) in
+  (x + minx, y + miny)
+
+let get_pos room (x,y) =
+  let (x', y') = coor_to_map_index room (x,y) in
+  room.map.(x').(y')
 
 (* convert a list of points to a list of (int * int) *)
 let polygon_to_int_pairs polygon = 

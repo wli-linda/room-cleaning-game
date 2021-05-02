@@ -67,7 +67,7 @@ Fourth QUADRANT (Bottom Left):
 - Move the point Up, Left, or Right within the boundary
 - Can't touch the negative y-axis
 - Until reaching the negative x-axis
-- If last point = initial point -> retract by one step
+- If last point = initial point -> do not add last point to corner list
 
 
 *)
@@ -261,7 +261,7 @@ let generate_random_room (size : int) : room =
   in
 
     let final_corner_list =
-    if last_dir = Up
+    if final_coor = initial_point
     then corner_list
     else final_coor :: corner_list
   in 
@@ -388,7 +388,14 @@ let valid_room (r: room) : bool =
     let space_for_vroomba = 
       cleanable r (0,0)
 
-  in no_intersect_or_collinear && no_straight_line && space_for_vroomba
+  in 
+  if not no_intersect_or_collinear
+  then print_endline "Found intersection or collinear";
+  if not no_straight_line
+  then print_endline "Found straight line";
+  if not space_for_vroomba
+  then print_endline "No space for vroomba"; 
+  no_intersect_or_collinear && no_straight_line && space_for_vroomba
 end
 
 (*********************************************)
@@ -397,12 +404,12 @@ end
 
 
 (* let%test "Generated room is valid" = 
-  for i = 0 to 100 do
+  (* for i = 0 to 100 do *)
     let size = 2 + Random.int 500 in
     let r = generate_random_room size in
-    assert(valid_room r)
-    done;
-  true *)
+    valid_room r
+    (* done; *)
+  (* true *) *)
 
 
 (* TODO: add more tests *)
@@ -420,7 +427,7 @@ let%test "test_valid_room_simple" =
 (0, 0); (4, 0); (4, 4); (0, 4); (0, 0); (-4, 0); (-4, -4); (0, -4) 
 (0, 0); (0, 1); (1, 1); (2, 1); (2, 2); (-1, 2); (-1, 0)
 *)
-
+(* 
 let%test "test_valid_room_simple_negative" = 
   let input  = BinaryEncodings.find_file "../../../resources/invalid.txt" in
   let polygon_list = file_to_polygons input in
@@ -429,4 +436,4 @@ let%test "test_valid_room_simple_negative" =
                     try (let room = polygon_to_room p in  
                     not (valid_room room))
                     with Failure _ -> true) 
-  polygon_list
+  polygon_list *)
