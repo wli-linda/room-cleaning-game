@@ -69,7 +69,9 @@ Fourth QUADRANT (Bottom Left):
 - Until reaching the negative x-axis
 - If last point = initial point -> do not add last point to corner list
 
-
+Some limitations on moving directions & steps in each quadrant
+- The maximum number of steps allowed to take in a direction is limited by the boundary 
+- If the previous move is Up, the next can't be Down, etc. Basically, can't "cancel" the previous move
 *)
 
 
@@ -179,9 +181,7 @@ let generate_random_room (size : int) : room =
  
       let max_moves = get_max_steps_in_direction allowed_moves dir in      
       let steps = if max_moves = 0 then 0 else (Random.int (max_moves) +1) in 
-      (* Printf.printf "Take %d steps\n" steps; *)
       let new_coor = take_steps_in_dir coor steps dir in
-      (* let (x,y) = new_coor in Printf.printf "New coor (%d, %d )\n" x y;   *)
 
       (* if the current direction is different from prev_dir, the point has 
       taken a turn. We record the previous point in the corner list *)    
@@ -221,24 +221,21 @@ let generate_random_room (size : int) : room =
           then (new_coor, dir, new_corner_list)
           else make_following_moves new_coor dir new_corner_list false
     in 
-      (* print_endline "Making first move."; *)
+
       let (new_coor, dir, new_corner_list) = make_first_move () in
       if should_stop new_coor quad 
       then (new_coor, dir, new_corner_list)
       else 
-      ( (* (print_endline "Making following moves.";  *)
-      make_following_moves new_coor dir new_corner_list false)
+      make_following_moves new_coor dir new_corner_list false
   in
 
   let rec move_through_four_quadrants init_coor prev_dir corner_list num =
-(*     Printf.printf "Quadrant.(%d)\n" num; *)
     if num = 4
     then (init_coor, prev_dir, corner_list)
     else
     let quad = four_quadrants.(num) in
     let (new_coor, dir, new_corner_list) = move_in_quadrant init_coor prev_dir quad corner_list
     in 
-(*     let (x, y) = new_coor in Printf.printf "----- Final coor (%d, %d)\n" x y; *)
     move_through_four_quadrants new_coor dir new_corner_list (num + 1)
   
   in 
