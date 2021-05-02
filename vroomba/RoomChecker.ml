@@ -29,6 +29,8 @@ open Rooms
 open Graphs
 open BetterHashTable
 open RoomGenerator
+open RoomUtil
+
 module HygieneTable = 
   ResizableListBasedHashTable(struct type t = (int * int) end)
 
@@ -65,54 +67,6 @@ type state = {
  dirty_tiles : int ref
 }
 
-(* get the number of tiles in the room *)
-let get_tiles_num room : int = 
-  let tiles = ref 0 in
-  let map = room.map in
-  let len = Array.length map in
-  for x = 0 to len - 2 do 
-    for y = 0 to len - 2 do 
-      let p1 = map.(x).(y) in 
-      let p2 = map.(x).(y + 1) in 
-      let p3 = map.(x + 1).(y) in 
-      let p4 = map.(x + 1).(y + 1) in
-      if p1 != Outer && p2 != Outer && 
-        p3 != Outer && p4 != Outer
-      then tiles := !tiles + 1
-    done;
-  done;
-  !tiles
-
-let%test "test_get_actual_size" =
-  let input  = BinaryEncodings.find_file "../../../resources/basic.txt" in
-  let polygon_list = file_to_polygons input in
-  let p = List.hd polygon_list in
-  let room = polygon_to_room p in 
-  let num = get_tiles_num room in
-  num = 20
-
-(*get all coordinates of the room & outside space*)
-let get_all_points room =
-  let map = room.map in 
-  let len = Array.length map in
-  let all_points = ref [] in 
-  for x = 0 to len - 1 do 
-    for y = 0 to len - 1 do 
-    let coor = map_index_to_coor room (x,y) in
-    all_points := coor :: !all_points
-    done
-  done;
-  !all_points
-
-
-let%test "test_get_actual_size" =
-  let input  = BinaryEncodings.find_file "../../../resources/basic.txt" in
-  let polygon_list = file_to_polygons input in
-  let p = List.hd polygon_list in
-  let room = polygon_to_room p in 
-  let all_points = get_all_points room in
-  let num = List.length all_points in 
-  num = 81
 
 
 let initiate_state room =
@@ -195,45 +149,6 @@ Mark the hygeine status as Clean only if the tile is Dirty
  *)
 
 
-(*retrieve the coordinates of the points in the same tile*)
-let get_three_neighbors (x, y) = 
-  let n1 = (x, y + 1)
-  and n2 = (x + 1, y)
-  and n3 = (x + 1, y +1) in
-  [n1; n2; n3]
-
-(*retrieve the coordinates of the neighboring tiles*)
-let get_eight_neighbors (x, y) = 
-  let n1 = (x, y + 1)
-  and n2 = (x + 1, y)
-  and n3 = (x + 1, y + 1)
-  and n4 = (x + 1, y - 1)
-  and n5 = (x, y - 1)
-  and n6 = (x - 1, y - 1)
-  and n7 = (x - 1, y)
-  and n8 = (x - 1, y + 1)
-  in
-  [n1; n2; n3; n4; n5; n6; n7; n8]
-
-(*if a coordinate exists in the room space*)
-let exist_in_room room coor = 
-  let all_points = get_all_points room in
-  List.mem coor all_points 
-
-
-let cleanable room coor : bool =
-  let p = get_pos room coor in 
-  match p with 
-  | Outer -> false
-  | Inner -> true
-  | Edge -> 
-  let neighbours = get_three_neighbors coor in 
-  List.for_all (fun n ->  
-                  (exist_in_room room n) && 
-                  let np = get_pos room n 
-                    in not (np = Outer)  ) 
-               neighbours 
-
 let clean_a_tile state coor = 
   let ht = state.table in 
   let hg = get_exn (HygieneTable.get ht coor) in
@@ -241,26 +156,6 @@ let clean_a_tile state coor =
   then
   state.dirty_tiles := !(state.dirty_tiles) - 1;
   HygieneTable.insert ht coor Clean
-
-
-let reachable room coor neighbor = 
-  let (a, b) = coor in 
-  let (c, d) = neighbor in
-  let (dx, dy) = (c-a, d-b) in 
-  (*four next-door neighbors are reachable*)
-  if (abs dx = 1 && dy = 0) || (dx = 0 && abs dy = 1)
-  then true
-  else
-  begin 
-  (cleanable room (a, d)) &&
-  (cleanable room (c, b))
-  end
-
-let%test "test_reachable" = 
-  let s = "(0, 0); (1, 0); (1, 1); (2, 1); (2, 2); (0, 2)" in
-  let room = string_to_polygon s |> get_exn |> polygon_to_room in
-  reachable room (0, 0) (0, 1) &&
-  not (reachable room (0, 0) (1, 1))
 
 
 (*  Check that the sequence of moves is valid  *)

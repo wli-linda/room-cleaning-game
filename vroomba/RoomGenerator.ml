@@ -26,7 +26,8 @@ SOFTWARE.
 open Util
 open Rooms
 open Polygons
-open ArrayUtil 
+open ArrayUtil
+open RoomUtil
 (*********************************************)
 (*       Automated generation of rooms       *)
 (*********************************************)
@@ -71,13 +72,6 @@ Fourth QUADRANT (Bottom Left):
 
 *)
 
-type direction = 
-  |Up
-  |Down
-  |Left
-  |Right
-  |Diagonal
-  |Stop
 
 type quadrant =
   | First
@@ -317,64 +311,7 @@ let generate_random_room (size : int) : room =
 *)
 
 
-let point_to_coor (Point (x, y)) = 
-  (int_of_float x,int_of_float y)
-
-let coor_to_point (x,y)=
-  Point (float_of_int x, float_of_int y)
-
-(*RUI: input coordinates; output pos
-TODO: Change this for negative coordinates*)
-let get_pos room (x,y) =
-  room.map.(x).(y)
-
-let coor_to_map_index room (x,y) = 
-  (x, y)
-
-let map_index_to_coor room (x,y)  = 
-  (x, y)
-
-let polygon_to_int_pairs polygon = 
-  let int_pairs = ref [] in 
-  List.iter (fun p -> 
-                    let (x,y) = point_to_coor p in 
-                    int_pairs := (x,y):: !int_pairs) 
-            polygon;
-  List.rev !int_pairs
-
-
-
 (* find the direction from point 1 to point 2*)
-
-
-let find_direction p1 p2 = 
-  let (x1, y1) = point_to_coor p1
-  and (x2, y2) = point_to_coor p2 in 
-  let (h, v) = ((x2 - x1), (y2 - y1)) in 
-  if h = 0 
-  then (if v = 0 then Stop else (if v>0 then Up else Down))
-  else 
-    (if h >0 
-    then (if v = 0 then Right else (if v>0 then Diagonal else Diagonal))
-    else (if v = 0 then Left else (if v>0 then Diagonal else Diagonal) ))
-
-let print_segment s = 
-  let p1, p2 = s in 
-  let (x1, y1) = point_to_coor p1 in 
-  let (x2, y2) = point_to_coor p2 in 
-  Printf.printf "segment (%d, %d), (%d, %d)\n" x1 y1 x2 y2 
-
-
-let print_segment_list l = 
-  List.iter (fun s -> print_segment s) l
-
-let on_straight_line s1 s2= 
-    let (p1, p2) = s1
-    and (p3, p4) = s2 in
-    let d1 = find_direction p2 p1
-    and d2 = find_direction p4 p3 in
-    d1 = d2
-
 
 let valid_room (r: room) : bool = 
   let polygon = room_to_polygon r in 
@@ -452,7 +389,7 @@ let valid_room (r: room) : bool =
   in
 
     let space_for_vroomba = 
-      get_pos r (0, 0) != Outer && get_pos r (1, 1) != Outer
+      cleanable r (0,0)
 
   in no_intersect_or_collinear && no_straight_line && space_for_vroomba
 end
@@ -466,13 +403,13 @@ end
 (*********************************************)
 
 
-let%test "Generated room is valid" = 
+(* let%test "Generated room is valid" = 
   for i = 0 to 100 do
     let size = 2 + Random.int 500 in
     let r = generate_random_room size in
     assert(valid_room r)
     done;
-  true
+  true *)
 
 
 (* TODO: add more tests *)
