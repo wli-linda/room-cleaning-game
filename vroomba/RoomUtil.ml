@@ -217,3 +217,13 @@ let%test "test_reachable" =
   let room = string_to_polygon s |> get_exn |> polygon_to_room in
   reachable room (0, 0) (0, 1) &&
   not (reachable room (0, 0) (1, 1)) 
+
+let%test "test_cleanable" = 
+  let s = "(0, 0); (1, 0); (1, 1); (2, 1); (2, 2); (0, 2)" in
+  let room = string_to_polygon s |> get_exn |> polygon_to_room in
+  cleanable room (0, 0) &&
+  cleanable room (0, 1) &&
+  cleanable room (1, 1) &&
+  not (cleanable room (1,0)) &&
+  not (cleanable room (2,1)) &&
+  not (cleanable room (2,2))
