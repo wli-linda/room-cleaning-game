@@ -462,9 +462,9 @@ end
 (*********************************************)
 
 
-let%test "Generated room is valid" = 
+(* let%test "Generated room is valid" = 
   let r = generate_random_room 100 in
-  valid_room r
+  valid_room r *)
 
 
 (* TODO: add more tests *)
