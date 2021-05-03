@@ -257,7 +257,6 @@ let room_to_polygon (r: room) : polygon =
 
 (* Tests *)
 
-
 let%test "test file_to_polygon & write_polygons_to_file" = 
   let input  = BinaryEncodings.find_file "../../../resources/rooms.txt" in
   let output = "test.tmp" in
@@ -268,7 +267,17 @@ let%test "test file_to_polygon & write_polygons_to_file" =
   Sys.remove output;
   string = string'
 
-let%test "test polygon_to_room & room_to_polygon" = 
+let%test "test file_to_polygon & write_polygons_to_file random" = 
+  let input  = BinaryEncodings.find_file "../../../resources/test_generate_l.txt" in
+  let output = "test.tmp" in
+  let string = ReadingFiles.read_file_to_strings input in 
+  let polygon_list = file_to_polygons input in
+  write_polygons_to_file polygon_list output;
+  let string' = ReadingFiles.read_file_to_strings output in
+  Sys.remove output;
+  string = string'
+
+let%test "test polygon_to_room & room_to_polygon 1" = 
   let input  = BinaryEncodings.find_file "../../../resources/basic.txt" in
   let polygon_list = file_to_polygons input in
   List.for_all (fun p -> 
@@ -276,6 +285,24 @@ let%test "test polygon_to_room & room_to_polygon" =
                     let p' = room_to_polygon room in 
                     p = p') 
   polygon_list
+
+let%test "test polygon_to_room & room_to_polygon 2" = 
+  let input  = BinaryEncodings.find_file "../../../resources/rooms.txt" in
+  let polygon_list = file_to_polygons input in
+  List.for_all (fun p -> 
+      let room = polygon_to_room_2 p in 
+      let p' = room_to_polygon room in 
+      p = p') 
+    polygon_list
+
+let%test "test polygon_to_room & room_to_polygon 3" = 
+  let input  = BinaryEncodings.find_file "../../../resources/test_generate_l.txt" in
+  let polygon_list = file_to_polygons input in
+  List.for_all (fun p -> 
+      let room = polygon_to_room_2 p in 
+      let p' = room_to_polygon room in 
+      p = p') 
+    polygon_list
 
 let%test "test polygon_to_room & room_to_polygon negative" = 
   let input  = BinaryEncodings.find_file "../../../resources/invalid.txt" in
@@ -287,3 +314,4 @@ let%test "test polygon_to_room & room_to_polygon negative" =
                     p = p'
                     with Failure _ -> true) 
   polygon_list
+
