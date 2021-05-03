@@ -115,11 +115,10 @@ let init_state r =
   clean state start;
   state
     
-let get_id ct coor =
-  CoorTable.get ct coor
+let get_id ct coor = CoorTable.get ct coor
 
 let add_edges g ct coor =
-  let add_edge src dst_op =
+  let add_room_edge src dst_op =
     if dst_op != None
     then (let dst = get_exn dst_op in
           add_edge g src dst;
@@ -130,10 +129,10 @@ let add_edges g ct coor =
   let left = get_id ct (x - 1, y) in
   let down = get_id ct (x, y - 1) in
   let right = get_id ct (x + 1, y) in
-  add_edge id up;
-  add_edge id left;
-  add_edge id down;
-  add_edge id right
+  add_room_edge id up;
+  add_room_edge id left;
+  add_room_edge id down;
+  add_room_edge id right
 
 let create_graph r =
   let g = mk_graph () in
@@ -145,7 +144,8 @@ let create_graph r =
   List.iter (fun coor -> add_edges g ct coor) ls;
   (g, ct)
   
-    
+
+(* for printing moves when debugging *)
 let moves_to_string ls =
   let buffer = Buffer.create 1 in
   List.iter (fun m -> Buffer.add_string buffer (pp_move m)) ls;
@@ -202,15 +202,7 @@ let solve_room (r: room) : move list =
             if get_exn @@ HygieneTable.get ht coor = Clean &&
                (let succ_succ_ls = get_succ g h in
                 let op = check_hygiene succ_succ_ls in
-                op = None) &&
-               (let neighbors = get_diag_neighbors coor in
-                let neighbors_ls = ref [] in
-                List.iter (fun c -> let op = get_id ct c in
-                            if op != None
-                            then neighbors_ls := get_exn op :: !neighbors_ls
-                          ) neighbors;
-                let next_move_op = check_hygiene !neighbors_ls in
-                next_move_op = None)
+                op = None) 
             then walk_succ_ls id_walk tl ls_moved 
             else begin
               new_move := true;
