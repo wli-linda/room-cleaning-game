@@ -29,6 +29,7 @@ open Rooms
 open RoomChecker
 open RoomGenerator
 open RoomSolver
+open RoomUtil
 open GraphicUtil
 include Polygons
 
@@ -91,6 +92,56 @@ let check_square x y arr =
     done;
     !inside
 
+(* let load_vroomba_picture path =  *)
+
+  
+let render_games_eg2 (input_path: string) (output_path : string): unit = 
+  (* open_graph " 1800x1600"; *)
+  
+  let get_abs (ox,oy) t_width (x,y) = 
+    ox + t_width * x, oy + t_width * y
+
+  in let draw_board r =
+    let wrapper_dim = (800, 800) in
+    let board_dim = (600, 600) in
+    open_graph @@ Printf.sprintf " %dx%d" (fst wrapper_dim) (snd wrapper_dim);
+    let lbc_board = ((fst wrapper_dim - fst board_dim) / 2, 
+                    (snd wrapper_dim - snd board_dim) / 2) in
+    set_color (rgb 255 255 204);
+    fill_rect (fst lbc_board) (snd lbc_board) (fst board_dim) (snd board_dim);
+
+    let tile_width = (fst board_dim) / (Array.length r.map) in
+    lbc_board, tile_width
+    
+  
+  in let draw_room r lbc_board tile_width =
+    (* Fill the room *)
+    (* let room_int_pairs_array_abs = !(r.edges) |> list_to_array |> Array.map (get_abs 
+        lbc_board tile_width) in *)
+    
+    let room_int_pairs_array_abs = get_edges_no_shift r |> list_to_array 
+        |> Array.map (get_abs lbc_board tile_width) in
+    fill_poly_color ~color:(Graphics.yellow) room_int_pairs_array_abs;
+    (* draw the lattices *)
+    let all_tiles = get_all_tiles_no_shift r |> list_to_array in
+    set_color Graphics.black;
+    for i = 0 to Array.length all_tiles - 1 do
+      let (x,y) = all_tiles.(i) in 
+      let (final_x, final_y) = get_abs lbc_board tile_width (x,y) in
+      draw_rect final_x final_y tile_width tile_width
+    done
+
+
+  in let play r = 
+    let (lbc_board, tile_width) = draw_board r in
+    draw_room r lbc_board tile_width;
+    wait_until_q_pressed ()
+
+  in let poly_list = file_to_polygons input_path 
+  in let room_list = List.map polygon_to_room poly_list 
+  in List.iter play room_list
+
+
 let render_games_eg (input_path: string) (output_path : string): unit = 
   open_graph " 800x600";
   (* Check whether the block with (x,y) as the left bottom corner is 
@@ -141,3 +192,6 @@ let try_eg () =
   in render_games_eg f ""
   (* TODO: Implement the rest *)
 
+let try_eg_2 () ?file:(file = "basic") =
+  let f = BinaryEncodings.find_file "resources/" ^ file ^ ".txt" 
+  in render_games_eg2 f ""
