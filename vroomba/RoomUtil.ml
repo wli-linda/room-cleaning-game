@@ -126,34 +126,16 @@ let exist_in_room room coor =
   let all_points = get_all_points room in
   List.mem coor all_points 
 
+(* **************** ZITING'S ADDITION **************** *)
+(* **************** From here onwards **************** *)
+
 (* A less expensive version *)
 let exist_in_room_no_shift room coor = 
   let size = Array.length room.map in 
   let (x,y) = coor in 
   0 <= x && x < size && 0 <= y && y < size
 
-(*is a tile at coor cleanable? aka. is a room tile?
 
-A tile is cleanable if:
-1. The pos is Inner; or
-2. The pos is Edge && (Other 3 pos in the same square are not Outer)*)
-
-(* let cleanable room coor : bool =
-  let p = get_pos room coor in 
-  match p with 
-  | Outer -> false
-  | Inner -> true
-  | Edge -> 
-  let neighbours = get_three_neighbors coor in 
-  List.for_all (fun n ->  
-                  (exist_in_room room n) && 
-                  let np = get_pos room n 
-                    in not (np = Outer)  ) 
-               neighbours *)
-
-(* Same as cleanable except for that cleanable takes the 
-    absolute coordinates of a square's left bottom corner, while 
-    no_shift takes relative coordinates aka the array index. *)
 
 let get_edges_no_shift room =
   let (shift_x, shift_y) = !(room.shift) in
@@ -162,22 +144,20 @@ let get_edges_no_shift room =
 let get_pos_no_shift room (x,y) = 
   room.map.(x).(y)
 
-(* let cleanable_no_shift room relative_coor : bool =
-  let p = get_pos_no_shift room relative_coor in 
-    match p with 
-    | Outer -> false
-    | Inner -> true
-    | Edge -> 
-    (* | _ -> *)
-    let neighbours = get_three_neighbors relative_coor in 
-    List.for_all (fun n ->  
-                    (exist_in_room_no_shift room n) && 
-                    let np = get_pos_no_shift room (n) 
-                      in not (np = Outer)  ) 
-                neighbours *)
+
+(*is a tile at coor cleanable? aka. is a room tile?
+
+A tile is cleanable if:
+1. The pos is Inner; or
+2. The pos is Edge && (Other 3 pos in the same square are not Outer)*)
+
+(* Same as cleanable except for that cleanable takes the 
+    absolute coordinates of a square's left bottom corner, while 
+    no_shift takes relative coordinates aka the array index. *)
 
 (* If a tile's 4 corners are on the edges, check whether the centre
   of the tile is within the polygon  *)
+
 let cleanable_no_shift_2 room relative_coor : bool =
   let (x,y) = relative_coor in
   let corners = [|(x, y); (x, y+1); (x+1, y); (x+1, y+1)|] in 
@@ -203,12 +183,6 @@ let cleanable_no_shift_2 room relative_coor : bool =
     and poly = polygon_of_int_pairs !(room.edges) in 
     if not @@ point_within_polygon_2 poly center_p then (inside := false)
 
-  (* if !inside && !no_of_corners == 4 then 
-    (if Array.for_all (fun n -> get_pos_no_shift room n == Edge) corners then
-      let center_p = relative_coor |> map_index_to_coor |> coor_to_point 
-      |> get_center 
-      and poly = polygon_of_int_pairs !(room.edges) in 
-      if point_within_polygon_2 poly center_p then false) *)
   end;
   !inside
 (*get the coordinates of all tiles*)
@@ -216,19 +190,6 @@ let cleanable_no_shift_2 room relative_coor : bool =
 (* Same as get_all_tiles except for that no_shift returns the 
     relative coordinates of left bottom corners, not absolute 
     coordinates as in get_all_tiles *)
-
-(* let get_all_tiles_no_shift room = 
-  let tiles = ref [] in
-  let map = room.map in
-  let len = Array.length map in
-  for x = 0 to len - 1 do 
-    for y = 0 to len - 1 do 
-      let coor = (x, y) in
-      if cleanable_no_shift room coor 
-      then tiles := coor :: !tiles
-    done;
-  done;
-  !tiles *)
 
 let get_all_tiles_no_shift_2 room = 
   let tiles = ref [] in
@@ -243,27 +204,11 @@ let get_all_tiles_no_shift_2 room =
   done;
   !tiles
 
-(* let get_all_tiles room =
-  let tiles = ref [] in
-  let map = room.map in
-  let len = Array.length map in
-  for x = 0 to len - 1 do 
-    for y = 0 to len - 1 do 
-      let coor = map_index_to_coor room (x,y) in
-      if cleanable room coor 
-      then tiles := coor :: !tiles
-    done;
-  done;
-  !tiles *)
-
- (* get the number of tiles in the room *)
-(* let get_tiles_num room =
-  let tiles = get_all_tiles room in
-  List.length tiles *)
 
 let get_tiles_num_2 room =
   let tiles = get_all_tiles_no_shift_2 room in
   List.length tiles
+
 (* is a neighbor tile reachable from the current tile
 
 four next-door neighbors are always reachable given that they are a tile (cleanable)
@@ -271,24 +216,6 @@ four next-door neighbors are always reachable given that they are a tile (cleana
 A diagonal tile is reachable if:
 1. It is cleanable (aka. is a room tile) &&
 2. Its two neighbors in the same 2x2 square as the current tile are cleanable *)
-
-(* let reachable room coor neighbor = 
-  let (a, b) = coor in 
-  let (c, d) = neighbor in
-  let (dx, dy) = (c-a, d-b) in
-
-  (* the neighbor is a tile *)
-  cleanable room neighbor &&
-
-  begin
-    (*the neighbor is next-door -> reachable *)
-    ((abs dx = 1 && dy = 0) || (dx = 0 && abs dy = 1)) ||
-    (*the neighbor is diagonal to current tile*)
-    begin 
-    (cleanable room (a, d)) &&
-    (cleanable room (c, b))
-    end
-  end *)
 
 let reachable_2 room coor neighbor = 
   let (a, b) = coor in 
@@ -307,6 +234,10 @@ let reachable_2 room coor neighbor =
     (cleanable_no_shift_2 room (c, b))
     end
   end
+
+(* **************** ZITING'S ADDITION **************** *)
+(* **************** Till here **************** *)
+
 (* ========Tests=======*)
 
 let%test "test_get_tiles_num" =

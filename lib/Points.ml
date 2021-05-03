@@ -106,8 +106,6 @@ let (--) (Point (x1, y1)) (Point (x2, y2)) =
 let get_center p =
   p ++ (0.5, 0.5)
 
-(* let scale s (Point (x, y)) = 
-  Point ((x *. s), (y *. s)) *)
 (***************************************)
 (* Scalar product and its applications *)
 (***************************************)
