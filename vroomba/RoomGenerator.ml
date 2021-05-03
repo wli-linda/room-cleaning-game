@@ -254,7 +254,7 @@ let generate_random_room (size : int) : room =
   (*Convert corner list to polygon & shift (0,0) to a random but valid starting point *)
     let polygon = polygon_of_int_pairs final_corner_list in
     let polygon' = relocate_starting_point polygon in
-    let room = polygon_to_room polygon' in
+    let room = polygon_to_room_2 polygon' in
 
     room
 
