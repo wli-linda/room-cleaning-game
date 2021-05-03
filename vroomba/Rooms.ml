@@ -49,9 +49,8 @@ let mk_room size =
   for i = 0 to size - 1 do
     map.(i) <- Array.make size Outer
   done;
-  (* map.(0).(0) <- Edge; *)
   { map = map;
-    edges = ref [(0, 0)];
+    edges = ref [];
     shift = ref (0, 0)
   }
 
