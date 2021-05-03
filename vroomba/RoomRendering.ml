@@ -95,7 +95,8 @@ let check_square x y arr =
 (* let load_vroomba_picture path =  *)
 
   
-let render_games_eg2 (input_path: string) (output_path : string): unit = 
+(* let render_games_eg2 (input_path: string) (output_path : string): unit =  *)
+let render_games_eg2 (input_path: string) (output_path : string) = 
   (* open_graph " 1800x1600"; *)
   
   let get_abs (ox,oy) t_width (x,y) = 
@@ -122,6 +123,7 @@ let render_games_eg2 (input_path: string) (output_path : string): unit =
     let room_int_pairs_array_abs = get_edges_no_shift r |> list_to_array 
         |> Array.map (get_abs lbc_board tile_width) in
     fill_poly_color ~color:(Graphics.yellow) room_int_pairs_array_abs;
+    
     (* draw the lattices *)
     let all_tiles = get_all_tiles_no_shift r |> list_to_array in
     set_color Graphics.black;
@@ -132,17 +134,22 @@ let render_games_eg2 (input_path: string) (output_path : string): unit =
     done
 
 
+  in let draw_vroomba r lbc_board tile_width (x,y) =
+    set_color Graphics.green;
+    fill_rect x y tile_width tile_width 
+
   in let play r = 
     let (lbc_board, tile_width) = draw_board r in
     draw_room r lbc_board tile_width;
     wait_until_q_pressed ()
 
   in let poly_list = file_to_polygons input_path 
-  in let room_list = List.map polygon_to_room poly_list 
-  in List.iter play room_list
+  in let room_list = List.map polygon_to_room_2 poly_list |> list_to_array
+  in Array.iter play room_list;
+  room_list.(1)
 
 
-let render_games_eg (input_path: string) (output_path : string): unit = 
+(* let render_games_eg (input_path: string) (output_path : string): unit = 
   open_graph " 800x600";
   (* Check whether the block with (x,y) as the left bottom corner is 
     inside the room *)
@@ -183,15 +190,17 @@ let render_games_eg (input_path: string) (output_path : string): unit =
     (* Draw the lines separating all the lattices *)
 
   in let poly_list = file_to_polygons input_path 
+  (* in let room_list = List.map polygon_to_room poly_list 
+  in List.iter play room_list *)
   in let room_list = List.map polygon_to_room poly_list 
   in List.iter play room_list
-
 
 let try_eg () =
   let f = BinaryEncodings.find_file "resources/basic.txt" 
   in render_games_eg f ""
-  (* TODO: Implement the rest *)
+  (* TODO: Implement the rest *) *)
 
 let try_eg_2 () ?file:(file = "basic") =
-  let f = BinaryEncodings.find_file "resources/" ^ file ^ ".txt" 
-  in render_games_eg2 f ""
+  let f = BinaryEncodings.find_file "resources/" ^ file ^ ".txt" in 
+  let r = render_games_eg2 f "" in 
+  r
