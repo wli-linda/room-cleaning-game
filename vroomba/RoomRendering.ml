@@ -123,9 +123,9 @@ let render_games_eg2 (input_path: string) (output_path : string) =
     let room_int_pairs_array_abs = get_edges_no_shift r |> list_to_array 
         |> Array.map (get_abs lbc_board tile_width) in
     fill_poly_color ~color:(Graphics.yellow) room_int_pairs_array_abs;
-    
+
     (* draw the lattices *)
-    let all_tiles = get_all_tiles_no_shift r |> list_to_array in
+    let all_tiles = get_all_tiles_no_shift_2 r |> list_to_array in
     set_color Graphics.black;
     for i = 0 to Array.length all_tiles - 1 do
       let (x,y) = all_tiles.(i) in 

@@ -181,7 +181,7 @@ let fill_edges map ls =
       walk tl (x2, y2)
   in walk tl_init hd_init
 
-let fill_room map =
+(* let fill_room map =
   let len = Array.length map in
   let fill_space x y =
     let backtrack k' =
@@ -207,11 +207,11 @@ let fill_room map =
       then i := 1 + fill_space !i j
       else i := !i + 1
     done
-  done
+  done *)
 
 let coor_to_point (x,y)=
   Point (float_of_int x, float_of_int y)
-  
+
 let map_index_to_coor room (x,y)  = 
   let (minx, miny) = !(room.shift) in
   (x + minx, y + miny)
@@ -222,14 +222,22 @@ let fill_room_2 room map edges =
   let pol = polygon_of_int_pairs edges in 
   for i = 0 to len - 1 do
     for j = 0 to len - 1 do
+      if map.(i).(j) <> Edge then
+      begin
+      (* test if the left bottom corner of the tile is inside the polygon *)
+      (* if point_within_polygon_2 pol (map_index_to_coor room (i,j)
+      |> coor_to_point) *)
+
+      (* test if the center is inside the polygon *)
       if point_within_polygon_2 pol (map_index_to_coor room (i,j)
-      |> coor_to_point)
+      |> coor_to_point |> get_center)
       then map.(i).(j) <- Inner
+      end
     done 
   done
 
 (*  Convert a polygon to a room data type  *)
-let polygon_to_room (p: polygon) : room =
+(* let polygon_to_room (p: polygon) : room =
   (* get information about the polygon *)
   let pos_x = ref 0 in
   let pos_y = ref 0 in
@@ -264,7 +272,7 @@ let polygon_to_room (p: polygon) : room =
   end
   else fill_edges r.map !(r.edges);
   fill_room r.map;
-  r
+  r *)
 
 let polygon_to_room_2 (p: polygon) : room =
   (* get information about the polygon *)
@@ -325,7 +333,7 @@ let%test "test polygon_to_room & room_to_polygon" =
   let input  = BinaryEncodings.find_file "../../../resources/basic.txt" in
   let polygon_list = file_to_polygons input in
   List.for_all (fun p -> 
-                    let room = polygon_to_room p in 
+                    let room = polygon_to_room_2 p in 
                     let p' = room_to_polygon room in 
                     p = p') 
   polygon_list
@@ -335,7 +343,7 @@ let%test "test polygon_to_room & room_to_polygon negative" =
   let polygon_list = file_to_polygons input in
   List.for_all (fun p -> 
                     try
-                    let room = polygon_to_room p in 
+                    let room = polygon_to_room_2 p in 
                     let p' = room_to_polygon room in 
                     p = p'
                     with Failure _ -> true) 
