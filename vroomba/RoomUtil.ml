@@ -126,6 +126,11 @@ let exist_in_room room coor =
   let all_points = get_all_points room in
   List.mem coor all_points 
 
+(* A less expensive version *)
+let exist_in_room_no_shift room coor = 
+  let size = Array.length room.map in 
+  let (x,y) = coor in 
+  0 <= x && x < size && 0 <= y && y < size
 
 (*is a tile at coor cleanable? aka. is a room tile?
 
@@ -146,7 +151,49 @@ let cleanable room coor : bool =
                     in not (np = Outer)  ) 
                neighbours
 
+(* Same as cleanable except for that cleanable takes the 
+    absolute coordinates of a square's left bottom corner, while 
+    no_shift takes relative coordinates aka the array index. *)
+
+let get_edges_no_shift room =
+  let (shift_x, shift_y) = !(room.shift) in
+  !(room.edges) |> List.map (fun (x,y) -> (- shift_x + x, - shift_y + y))
+
+let get_pos_no_shift room (x,y) = 
+  room.map.(x).(y)
+
+let cleanable_no_shift room relative_coor : bool =
+  let p = get_pos_no_shift room relative_coor in 
+    match p with 
+    | Outer -> false
+    | Inner -> true
+    | Edge -> 
+    let neighbours = get_three_neighbors relative_coor in 
+    List.for_all (fun n ->  
+                    (exist_in_room_no_shift room n) && 
+                    let np = get_pos_no_shift room (n) 
+                      in not (np = Outer)  ) 
+                neighbours
+
 (*get the coordinates of all tiles*)
+
+(* Same as get_all_tiles except for that no_shift returns the 
+    relative coordinates of left bottom corners, not absolute 
+    coordinates as in get_all_tiles *)
+
+let get_all_tiles_no_shift room = 
+  let tiles = ref [] in
+  let map = room.map in
+  let len = Array.length map in
+  for x = 0 to len - 1 do 
+    for y = 0 to len - 1 do 
+      let coor = (x, y) in
+      if cleanable_no_shift room coor 
+      then tiles := coor :: !tiles
+    done;
+  done;
+  !tiles
+
 let get_all_tiles room =
   let tiles = ref [] in
   let map = room.map in
@@ -217,3 +264,13 @@ let%test "test_reachable" =
   let room = string_to_polygon s |> get_exn |> polygon_to_room in
   reachable room (0, 0) (0, 1) &&
   not (reachable room (0, 0) (1, 1)) 
+
+let%test "test_cleanable" = 
+  let s = "(0, 0); (1, 0); (1, 1); (2, 1); (2, 2); (0, 2)" in
+  let room = string_to_polygon s |> get_exn |> polygon_to_room in
+  cleanable room (0, 0) &&
+  cleanable room (0, 1) &&
+  cleanable room (1, 1) &&
+  not (cleanable room (1,0)) &&
+  not (cleanable room (2,1)) &&
+  not (cleanable room (2,2))

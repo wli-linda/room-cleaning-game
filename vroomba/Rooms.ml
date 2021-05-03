@@ -55,6 +55,24 @@ let mk_room size =
     shift = ref (0, 0)
   }
 
+(* let string_to_polygon_2 (s : string) : polygon option =
+  let extract_number string =
+
+  in  
+  let res = ref [] in
+  let coords = String.split_on_char ';' s in
+  try (
+    List.map (fun e -> String.split_on_char ',' e) coords |>
+    List.iter (fun ls ->
+        if List.length ls = 2
+        then begin
+          let x = extract_number @@ List.hd ls in
+          let y = extract_number @@ List.nth ls 1 in
+          res := (x, y) :: !res
+        end
+        else error "Ill-formed string!");
+    Some (polygon_of_int_pairs (List.rev !res)))
+  with error -> None *)
 
 (*  Read a polygon from a string of coordinates as in resources/basic.txt  *)
 (*  A string can be ill-formed! *)
@@ -189,6 +207,18 @@ let fill_room map =
       then i := 1 + fill_space !i j
       else i := !i + 1
     done
+  done
+
+(* After the edges are already filled *)
+let fill_room_2 map edges =
+  let len = Array.length map in 
+  let pol = polygon_of_int_pairs edges in 
+  for i = 0 to len - 1 do
+    for j = 0 to len - 1 do
+      if map.(i).(j) == Edge then 
+      if point_within_polygon pol @@ Point (float_of_int i, float_of_int j)
+      then map.(i).(j) <- Inner
+    done 
   done
 
 (*  Convert a polygon to a room data type  *)
