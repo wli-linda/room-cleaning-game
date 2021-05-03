@@ -32,6 +32,8 @@ open RoomUtil
 open BetterHashTable
 open Graphs
 open LinkedGraphs
+open BST
+open BinarySearchTree
 
 (*********************************************)
 (*              Room solver                  *)
@@ -91,17 +93,6 @@ let reachable' state coor neighbor =
     end
   end
   
-let clean state curr =
-  clean_a_tile state curr;
-  let neighbors = get_eight_neighbors curr in
-  let ht = state.table in
-  List.iter (fun coor ->
-      let op = HygieneTable.get ht coor in
-      if op != None
-      then (if reachable' state curr coor
-            then clean_a_tile state coor)
-    ) neighbors
-
 let init_state r =
   let ls = movable_coords r in
   let num = List.length ls in
@@ -138,12 +129,28 @@ let create_graph r =
   let g = mk_graph () in
   let ls = movable_coords r in
   let ct = CoorTable.mk_new_table (List.length ls) in
+  let bst = mk_tree () in
   List.iter (fun coor ->
       CoorTable.insert ct coor !(g.next_node_id);
+      insert bst !(g.next_node_id);
       add_node g coor) ls;
   List.iter (fun coor -> add_edges g ct coor) ls;
   (g, ct)
-  
+
+let clean state ct bst curr =
+  clean_a_tile state curr;
+  let id = get_id ct curr in
+  delete bst id;
+  let neighbors = get_eight_neighbors curr in
+  let ht = state.table in
+  List.iter (fun coor ->
+      let op = HygieneTable.get ht coor in
+      if op != None
+      then (if reachable' state curr coor
+            then (clean_a_tile state coor;
+                  let id = get_id ct coor in
+                  delete bst id))
+    ) neighbors
 
 (* for printing moves when debugging *)
 let moves_to_string ls =
@@ -160,8 +167,11 @@ let solve_room (r: room) : move list =
   let ht = state.table in
   let moves = ref [] in
   let init_coor = get_exn @@ get_id ct !(state.current) in
+  
+  (* get coordinates with node id *)
   let get_coor g id = get_value @@ get_node g id in
   
+  (* check if all succ nodes are cleaned *)
   let rec check_hygiene ls =
     match ls with
     | [] -> None
@@ -172,14 +182,6 @@ let solve_room (r: room) : move list =
       then Some h
       else check_hygiene tl
   in 
-
-  let get_diag_neighbors (x, y) =
-    [(x + 1, y + 1);
-     (x + 1, y - 1);
-     (x - 1, y + 1);
-     (x - 1, y - 1)]
-  in
-  
   (* TODO: DFS & BACKTRACKING *)
   let rec dfs_visit id =
     clean state (get_coor g id);
@@ -214,33 +216,6 @@ let solve_room (r: room) : move list =
               else error "Invalid move??";
               dfs_visit h
             end
-        end
-      and backtrack ls_moved id_bk =
-        if !(state.dirty_tiles) = 0
-        then List.rev !moves
-        else begin
-          match ls_moved with
-          | [] ->
-            (Printf.printf "Moves: %s \n" (moves_to_string (List.rev !moves));
-             Printf.printf "Tiles left: %d \n" !(state.dirty_tiles);
-             error "Unsolvable room!")
-          | h :: tl ->
-            let (x, y) = get_coor g id_bk in
-            let (coor', rev_move) = match h with
-              | RoomChecker.Up -> ((x, y - 1), RoomChecker.Down)
-              | Left -> ((x + 1, y), Right)
-              | Down -> ((x, y + 1), Up)
-              | Right -> ((x - 1, y), Left) in
-            moves := rev_move :: !moves;
-            if get_id ct coor' = None
-            then (let (x', y') = coor' in
-                  Printf.printf "Moved from: (%d, %d); \nMoveto: (%d, %d) \n"
-                    x y x' y';
-                  Printf.printf "Moves: %s \n"
-                    (moves_to_string (List.rev !moves)));
-            let id' = get_exn @@ get_id ct coor' in
-            let succ_ls' = get_succ g id' in
-            walk_succ_ls id' succ_ls' tl
         end
       in let succ_ls = get_succ g id in
       walk_succ_ls id succ_ls []
