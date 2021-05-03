@@ -201,8 +201,18 @@ let validate r s =
   match string_to_solution s with
   | None -> false
   | Some moves -> check_solution r moves
- 
 
+let check_runner input_file solutions_file =
+  let polygon_ls = file_to_polygons input_file in
+  let solutions_ls = BinaryEncodings.read_file_to_strings solutions_file in
+  let num = ref 1 in
+  List.iter2 (fun p s ->
+      let r = polygon_to_room_2 p in
+      if validate r s
+      then Printf.printf "%d: %d \n" !num (String.length s)
+      else Printf.printf "%d: Fail \n" !num;
+      num := !num + 1) polygon_ls solutions_ls
+      
 let%test _ = 
   let s = "(0, 0); (6, 0); (6, 1); (8, 1); (8, 2); (6, 2); (6, 3); (0, 3)" in
   let room = string_to_polygon s |> get_exn |> polygon_to_room_2 in
