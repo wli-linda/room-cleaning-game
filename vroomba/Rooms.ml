@@ -49,9 +49,8 @@ let mk_room size =
   for i = 0 to size - 1 do
     map.(i) <- Array.make size Outer
   done;
-  map.(0).(0) <- Edge;
   { map = map;
-    edges = ref [(0, 0)];
+    edges = ref [];
     shift = ref (0, 0)
   }
 
@@ -193,17 +192,27 @@ let fill_room map =
     while x + !k < len - 1 && not (map.(x + !k).(y) = Edge) do
       if x + !k = len - 2 && not (map.(len - 1).(y) = Edge)
       then (backtrack !k; k := len)
+      else if (map.(x).(y - 1) = Edge &&
+               (map.(x).(y + 1) != Edge ||
+                (x > 0 && map.(x - 1).(y - 1) = Inner)) &&
+               map.(x + 1).(y - 1) != Inner)
+      then k := !k + 1
       else (map.(x + !k).(y) <- Inner; k := !k + 1)
     done;
-    while x + !k < len - 1 && map.(x + !k).(y) = Edge do
-      k := !k + 1
-    done;
+    if x + !k < len - 1 && map.(x + !k - 1).(y) = Inner
+    then
+      (while x + !k < len - 1 && map.(x + !k).(y) = Edge do
+         k := !k + 1
+       done)
+    else k := !k - 1;
     x + !k
   in
-  for j = 0 to len - 1 do
+  for j = 1 to len - 2 do
     let i = ref 0 in
     while !i < len - 2 do
-      if map.(!i).(j) = Edge && not (map.(!i + 1).(j) = Edge)
+      if map.(!i).(j) = Edge &&
+         not (map.(!i + 1).(j) = Edge) &&
+         (map.(!i).(j + 1) = Edge || map.(!i).(j - 1) = Edge)
       then i := 1 + fill_space !i j
       else i := !i + 1
     done

@@ -72,7 +72,7 @@ let movable_coords r =
     done
   done;
   List.rev !ls
-
+(*
 let reachable' state coor neighbor = 
   let (a, b) = coor in 
   let (c, d) = neighbor in
@@ -222,7 +222,7 @@ let solve_room (r: room) : move list =
     end
   in dfs_visit init_coor
 
-
+*)
 
 (*********************************************)
 (*               Testing                     *)
