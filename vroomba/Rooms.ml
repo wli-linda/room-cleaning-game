@@ -49,7 +49,7 @@ let mk_room size =
   for i = 0 to size - 1 do
     map.(i) <- Array.make size Outer
   done;
-  map.(0).(0) <- Edge;
+  (* map.(0).(0) <- Edge; *)
   { map = map;
     edges = ref [(0, 0)];
     shift = ref (0, 0)
@@ -209,14 +209,21 @@ let fill_room map =
     done
   done
 
+let coor_to_point (x,y)=
+  Point (float_of_int x, float_of_int y)
+  
+let map_index_to_coor room (x,y)  = 
+  let (minx, miny) = !(room.shift) in
+  (x + minx, y + miny)
+
 (* After the edges are already filled *)
-let fill_room_2 map edges =
+let fill_room_2 room map edges =
   let len = Array.length map in 
   let pol = polygon_of_int_pairs edges in 
   for i = 0 to len - 1 do
     for j = 0 to len - 1 do
-      if map.(i).(j) == Edge then 
-      if point_within_polygon pol @@ Point (float_of_int i, float_of_int j)
+      if point_within_polygon_2 pol (map_index_to_coor room (i,j)
+      |> coor_to_point)
       then map.(i).(j) <- Inner
     done 
   done
@@ -257,6 +264,43 @@ let polygon_to_room (p: polygon) : room =
   end
   else fill_edges r.map !(r.edges);
   fill_room r.map;
+  r
+
+let polygon_to_room_2 (p: polygon) : room =
+  (* get information about the polygon *)
+  let pos_x = ref 0 in
+  let pos_y = ref 0 in
+  let neg_x = ref 0 in
+  let neg_y = ref 0 in
+  let ls = ref [] in
+  List.iter (fun e ->
+      let x = int_of_float @@ get_x e in
+      let y = int_of_float @@ get_y e in
+      
+      (* get room size with max/min coordinates *)
+      if x > !pos_x then pos_x := x;
+      if y > !pos_y then pos_y := y;
+      
+      (* and get shift values for negative coordinates *)
+      if x < !neg_x then neg_x := x;
+      if y < !neg_y then neg_y := y;
+
+      (* get int coordinates of float pairs *)
+      ls := (x, y) :: !ls) p;
+
+  (* create room based on coordinate list *)
+  let range_x = !pos_x - !neg_x in
+  let range_y = !pos_y - !neg_y in
+  let r = mk_room (1 + max range_x range_y) in
+  r.edges := (List.rev !ls);
+  if !neg_x < 0 || !neg_y < 0
+  then begin
+    let ls' = List.map (fun (x, y) -> (x - !neg_x, y - !neg_y)) !ls in
+    fill_edges r.map ls';
+    r.shift := (!neg_x, !neg_y)
+  end
+  else fill_edges r.map !(r.edges);
+  fill_room_2 r r.map !(r.edges);
   r
 
 (*  Convert a room to a list of polygon coordinates  *)

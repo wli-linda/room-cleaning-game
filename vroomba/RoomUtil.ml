@@ -168,6 +168,7 @@ let cleanable_no_shift room relative_coor : bool =
     | Outer -> false
     | Inner -> true
     | Edge -> 
+    (* | _ -> *)
     let neighbours = get_three_neighbors relative_coor in 
     List.for_all (fun n ->  
                     (exist_in_room_no_shift room n) && 
