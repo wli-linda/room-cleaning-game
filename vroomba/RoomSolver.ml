@@ -232,6 +232,17 @@ let solve_room (r: room) : move list =
     end
   in dfs_visit init_coor
     
+let solve_runner input_file output_file =
+  let polygon_ls = file_to_polygons input_file in
+  let res = ref [] in
+  List.iter (fun p ->
+      let r = polygon_to_room_2 p in
+      let moves = solve_room r in
+      let s = moves_to_string moves in
+      res := s :: !res) polygon_ls;
+  BinaryEncodings.write_strings_to_file output_file (List.rev !res)
+
+    
 (*********************************************)
 (*               Testing                     *)
 (*********************************************)
@@ -261,14 +272,26 @@ let%test "Basic room solver testing with rooms.txt" =
       let r = polygon_to_room_2 p in
       let moves = solve_room r in
       check_solution r moves) polygon_list
-    
-let%test "Randomised solver testing" = 
-  let r = generate_random_room 30 in
-  let moves = solve_room r in
-  check_solution r moves
-    
-let%test "Randomised solver testing 2" = 
+      
+let%test "Randomised solver testing 1" = 
   let r = generate_random_room 10 in
   let moves = solve_room r in
   check_solution r moves
-    
+
+let%test "Randomised solver testing 2" = 
+  let r = generate_random_room 30 in
+  let moves = solve_room r in
+  check_solution r moves
+ 
+let%test "Randomised solver testing 3" = 
+  let r = generate_random_room 100 in
+  let moves = solve_room r in
+  check_solution r moves
+
+let%test "Randomised solver testing 4" = 
+  let input  = BinaryEncodings.find_file "../../../resources/test_generate_l.txt" in
+  let polygon_list = file_to_polygons input in
+  List.for_all (fun p ->
+      let r = polygon_to_room_2 p in
+      let moves = solve_room r in
+      check_solution r moves) polygon_list

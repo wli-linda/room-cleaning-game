@@ -27,6 +27,7 @@ open Printf
 open Util
 
 open Rooms
+open RoomChecker
 open RoomSolver
 open RoomRendering
 
@@ -69,11 +70,11 @@ let () =
       else if command = "check"
       then
         let input_file = Sys.argv.(2) in
-        let output_file = Sys.argv.(3) in
-        error "impl"
+        let solutions_file = Sys.argv.(3) in
+        check_runner input_file solutions_file
       else if command = "solve"
       then
         let input_file = Sys.argv.(2) in
         let output_file = Sys.argv.(3) in
-        error "impl"
+        solve_runner input_file output_file
     end
