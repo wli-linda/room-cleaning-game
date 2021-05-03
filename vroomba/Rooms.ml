@@ -180,47 +180,13 @@ let fill_edges map ls =
       walk tl (x2, y2)
   in walk tl_init hd_init
 
-let fill_room map =
-  let len = Array.length map in
-  let fill_space x y =
-    let backtrack k' =
-      for i = 1 to k' - 1 do
-        map.(x + i).(y) <- Outer
-      done
-    in
-    let k = ref 1 in
-    while x + !k < len - 1 && not (map.(x + !k).(y) = Edge) do
-      if x + !k = len - 2 && not (map.(len - 1).(y) = Edge)
-      then (backtrack !k; k := len)
-      else if (map.(x).(y - 1) = Edge &&
-               (map.(x).(y + 1) != Edge ||
-                (x > 0 && map.(x - 1).(y - 1) = Inner)) &&
-               map.(x + 1).(y - 1) != Inner)
-      then k := !k + 1
-      else (map.(x + !k).(y) <- Inner; k := !k + 1)
-    done;
-    if x + !k < len - 1 && map.(x + !k - 1).(y) = Inner
-    then
-      (while x + !k < len - 1 && map.(x + !k).(y) = Edge do
-         k := !k + 1
-       done)
-    else k := !k - 1;
-    x + !k
-  in
-  for j = 1 to len - 2 do
-    let i = ref 0 in
-    while !i < len - 2 do
-      if map.(!i).(j) = Edge &&
-         not (map.(!i + 1).(j) = Edge) &&
-         (map.(!i).(j + 1) = Edge || map.(!i).(j - 1) = Edge)
-      then i := 1 + fill_space !i j
-      else i := !i + 1
-    done
-  done
+
+(* **************** ZITING'S ADDITION **************** *)
+(* **************** From here onwards **************** *)
 
 let coor_to_point (x,y)=
   Point (float_of_int x, float_of_int y)
-  
+
 let map_index_to_coor room (x,y)  = 
   let (minx, miny) = !(room.shift) in
   (x + minx, y + miny)
@@ -231,49 +197,18 @@ let fill_room_2 room map edges =
   let pol = polygon_of_int_pairs edges in 
   for i = 0 to len - 1 do
     for j = 0 to len - 1 do
+      if map.(i).(j) <> Edge then
+      begin
+
+      (* test if the center is inside the polygon *)
       if point_within_polygon_2 pol (map_index_to_coor room (i,j)
-      |> coor_to_point)
+      |> coor_to_point |> get_center)
       then map.(i).(j) <- Inner
+      end
     done 
   done
 
 (*  Convert a polygon to a room data type  *)
-let polygon_to_room (p: polygon) : room =
-  (* get information about the polygon *)
-  let pos_x = ref 0 in
-  let pos_y = ref 0 in
-  let neg_x = ref 0 in
-  let neg_y = ref 0 in
-  let ls = ref [] in
-  List.iter (fun e ->
-      let x = int_of_float @@ get_x e in
-      let y = int_of_float @@ get_y e in
-      
-      (* get room size with max/min coordinates *)
-      if x > !pos_x then pos_x := x;
-      if y > !pos_y then pos_y := y;
-      
-      (* and get shift values for negative coordinates *)
-      if x < !neg_x then neg_x := x;
-      if y < !neg_y then neg_y := y;
-
-      (* get int coordinates of float pairs *)
-      ls := (x, y) :: !ls) p;
-
-  (* create room based on coordinate list *)
-  let range_x = !pos_x - !neg_x in
-  let range_y = !pos_y - !neg_y in
-  let r = mk_room (1 + max range_x range_y) in
-  r.edges := (List.rev !ls);
-  if !neg_x < 0 || !neg_y < 0
-  then begin
-    let ls' = List.map (fun (x, y) -> (x - !neg_x, y - !neg_y)) !ls in
-    fill_edges r.map ls';
-    r.shift := (!neg_x, !neg_y)
-  end
-  else fill_edges r.map !(r.edges);
-  fill_room r.map;
-  r
 
 let polygon_to_room_2 (p: polygon) : room =
   (* get information about the polygon *)
@@ -312,6 +247,9 @@ let polygon_to_room_2 (p: polygon) : room =
   fill_room_2 r r.map !(r.edges);
   r
 
+(* **************** ZITING'S ADDITION **************** *)
+(* **************** Till here **************** *)
+
 (*  Convert a room to a list of polygon coordinates  *)
 let room_to_polygon (r: room) : polygon = 
   polygon_of_int_pairs !(r.edges)
@@ -343,16 +281,16 @@ let%test "test polygon_to_room & room_to_polygon 1" =
   let input  = BinaryEncodings.find_file "../../../resources/basic.txt" in
   let polygon_list = file_to_polygons input in
   List.for_all (fun p -> 
-      let room = polygon_to_room p in 
-      let p' = room_to_polygon room in 
-      p = p') 
-    polygon_list
+                    let room = polygon_to_room_2 p in 
+                    let p' = room_to_polygon room in 
+                    p = p') 
+  polygon_list
 
 let%test "test polygon_to_room & room_to_polygon 2" = 
   let input  = BinaryEncodings.find_file "../../../resources/rooms.txt" in
   let polygon_list = file_to_polygons input in
   List.for_all (fun p -> 
-      let room = polygon_to_room p in 
+      let room = polygon_to_room_2 p in 
       let p' = room_to_polygon room in 
       p = p') 
     polygon_list
@@ -361,7 +299,7 @@ let%test "test polygon_to_room & room_to_polygon 3" =
   let input  = BinaryEncodings.find_file "../../../resources/test_generate_l.txt" in
   let polygon_list = file_to_polygons input in
   List.for_all (fun p -> 
-      let room = polygon_to_room p in 
+      let room = polygon_to_room_2 p in 
       let p' = room_to_polygon room in 
       p = p') 
     polygon_list
@@ -370,9 +308,10 @@ let%test "test polygon_to_room & room_to_polygon negative" =
   let input  = BinaryEncodings.find_file "../../../resources/invalid.txt" in
   let polygon_list = file_to_polygons input in
   List.for_all (fun p -> 
-      try
-        let room = polygon_to_room p in 
-        let p' = room_to_polygon room in 
-        p = p'
-      with Failure _ -> true) 
-    polygon_list
+                    try
+                    let room = polygon_to_room_2 p in 
+                    let p' = room_to_polygon room in 
+                    p = p'
+                    with Failure _ -> true) 
+  polygon_list
+

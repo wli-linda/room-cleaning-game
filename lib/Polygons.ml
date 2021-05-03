@@ -312,33 +312,9 @@ let choose_ray_angle pol =
                           edge_angles) candidate_angles in
   phi
       
-                    
 
-let point_within_polygon pol p = 
-  let ray = (p, (choose_ray_angle pol)) in
-  let es = edges pol in
-  if List.mem p pol ||
-     List.exists (fun e -> point_on_segment e p) es then true
-  else
-    begin
-      let n = 
-        edges pol |> 
-        List.map (fun e -> ray_segment_intersection ray e) |>
-        List.filter (fun r -> r <> None) |>
-        List.map (fun r -> get_exn r) |>
-
-        (* Touching edges *)
-        uniq |>
-
-        (* Touching vertices *)
-        List.filter (neighbours_on_different_sides ray pol) |>
-
-        (* Compute length *)
-        List.length
-      in
-      n mod 2 = 1
-    end
-
+(* **************** ZITING'S ADDITION **************** *)
+(* **************** From here onwards **************** *)
 
 let point_within_polygon_2 pol p = 
   let ray = (p, (choose_ray_angle pol)) in
@@ -364,6 +340,9 @@ let point_within_polygon_2 pol p =
       in
       n mod 2 = 1
     end
+
+(* **************** ZITING'S ADDITION **************** *)
+(* **************** Till here **************** *)
 
 (*
 TODO: Test with the following points
