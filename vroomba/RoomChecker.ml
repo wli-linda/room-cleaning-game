@@ -29,7 +29,7 @@ open Rooms
 open Graphs
 open BetterHashTable
 open RoomGenerator
-open RoomUtil
+open RoomUtil  
 
 module HygieneTable = 
   ResizableListBasedHashTable(struct type t = (int * int) end)
@@ -71,7 +71,7 @@ type state = {
 
 let initiate_state room =
   let num = get_tiles_num room in
-  let all_tiles = get_all_tiles_no_shift room in
+  let all_tiles = get_all_tiles room in
   let ht = HygieneTable.mk_new_table num in
   List.iter (fun coor -> HygieneTable.insert ht coor Dirty) all_tiles;
   let starting_point = (0,0) in
@@ -158,15 +158,17 @@ let check_solution (r: room) (moves: move list) : bool =
   let success = ref true in
   while (!success && !remaining > 0) do
     begin
-
+  
     (* Check current point *)
     let curr = !(state.current) in
+(*     let (x, y) = curr in 
+    Printf.printf "currently at %d %d\n" x y; *)
     begin
     if not (exist_in_room r curr)
     then success := false
     else 
-      (if not (cleanable_no_shift r curr)
-      then success := false 
+      (if not (cleanable r curr)
+      then ((* print_endline "not cleanable";  *)success := false)
       else clean_a_tile state curr
       ) 
     end ;
@@ -193,14 +195,14 @@ let check_solution (r: room) (moves: move list) : bool =
   done;
   if !(state.dirty_tiles) > 0 
   then false
-  else !success
+  else !success ;;
 
 
 (*  Top-level validator  *)
 let validate r s = 
   match string_to_solution s with
   | None -> false
-  | Some moves -> check_solution r moves
+  | Some moves -> check_solution r moves ;;
 
 let check_runner input_file solutions_file =
   let polygon_ls = file_to_polygons input_file in
@@ -223,7 +225,7 @@ let%test _ =
 let%test "test_checker_simple 1" = 
   let s = "(0, 0); (1, 0); (1, 1); (0, 1)" in
   let room = string_to_polygon s |> get_exn |> polygon_to_room in
-  validate room "" 
+  validate room ""  ;;
 
 let%test "test_checker_simple 2" = 
   let s = "(0, 0); (2, 0); (2, 2); (0, 2)" in
