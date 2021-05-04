@@ -97,6 +97,7 @@ let render_games_eg2 (input_path: string) (output_path : string) =
       draw_rect final_x final_y tile_width tile_width
     done  *)
 
+
   (* TODO *)
   in let draw_clean tile_width (x,y) = 
     set_color Graphics.blue;
@@ -141,7 +142,7 @@ let render_games_eg2 (input_path: string) (output_path : string) =
     (* let workflow =  *)
     (* Ask for user input *)
     in 
-    
+
     let event = wait_next_event [Key_pressed] in
     if event.key == 'q' then 
       begin 
@@ -184,6 +185,7 @@ let render_games_eg2 (input_path: string) (output_path : string) =
         else wait_until_q_pressed r next_coor state move_list' lbc_board tile_width
         end
     end
+
 
     (* Other keys *)
     else wait_until_q_pressed r curr_coor state move_list lbc_board tile_width
