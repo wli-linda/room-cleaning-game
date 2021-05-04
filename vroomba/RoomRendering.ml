@@ -31,6 +31,7 @@ open RoomGenerator
 open RoomSolver
 open RoomUtil
 open GraphicUtil
+open ReadingFiles
 include Polygons
 
 
@@ -47,14 +48,16 @@ let write_solution_to_file (moves : move list) (path : string) : unit =
 
 (* TODO: feel free to modify this function to add more parameters
    necessary for tracking your game state *)
-let rec wait_until_q_pressed _ =
+let rec wait_until_q_pressed r =
   let event = wait_next_event [Key_pressed] in
-  if event.key == 'q' 
-  then close_graph ()
-  else begin
+  if event.key == 'q' then close_graph () else
+  if event.key == 'w' then () else
+  if event.key == 'd' then () else
+  if event.key == 'a' then () else
+  if event.key == 'd' then () else
       (* TODO: Implement the movement logic *)
-      wait_until_q_pressed ()
-    end
+  wait_until_q_pressed ()
+  
 
 (* Helper functions *)
 
@@ -69,8 +72,7 @@ let print_tuple (x,y) =
 (* Top-level funciton *)
 (* let render_games_eg2 (input_path: string) (output_path : string): unit =  *)
 let render_games_eg2 (input_path: string) (output_path : string) = 
-  (* open_graph " 1800x1600"; *)
-  
+
   let get_abs (ox,oy) t_width (x,y) = 
     ox + t_width * x, oy + t_width * y
 
@@ -88,40 +90,79 @@ let render_games_eg2 (input_path: string) (output_path : string) =
     
   
   in let draw_room r lbc_board tile_width =
-    (* Fill the room *)
-    (* let room_int_pairs_array_abs = !(r.edges) |> list_to_array |> Array.map (get_abs 
-        lbc_board tile_width) in *)
-    
+    (* Fill the room *)  
     let room_int_pairs_array_abs = get_edges_no_shift r |> list_to_array 
         |> Array.map (get_abs lbc_board tile_width) in
     fill_poly_color ~color:(Graphics.yellow) room_int_pairs_array_abs;
 
-    (* draw the lattices *)
+    (* draw the lattices
     let all_tiles = get_all_tiles_no_shift_2 r |> list_to_array in
     set_color Graphics.black;
     for i = 0 to Array.length all_tiles - 1 do
       let (x,y) = all_tiles.(i) in 
       let (final_x, final_y) = get_abs lbc_board tile_width (x,y) in
       draw_rect final_x final_y tile_width tile_width
-    done
+    done *)
 
   (* TODO *)
   in let draw_clean_boundary = ()
   in let draw_dirty_boundary = () 
-  in let draw_vroomba boundary = ()
 
-  in let display_vroomba r lbc_board tile_width (x,y) =
+  in let display_vroomba lbc_board tile_width (x,y) =
     set_color Graphics.green;
     fill_rect x y tile_width tile_width 
 
+  in let sol_list = ref []
+  in let save_moves m_list = 
+    String.concat "" (List.rev m_list)
+
+  in let output_sol_list output_path sol_list = 
+    write_strings_to_file output_path sol_list 
+
+  in let move_and_clean room state curr dir = 
+  (*clean neighbors*)
+  let clean_the_region curr =
+      (* Check the eight neighbors *)
+      let neighbors = get_eight_neighbors curr in
+      List.iter (fun coor -> 
+                if exist_in_room room coor
+                then 
+                  (if reachable room curr coor
+                  then clean_a_tile state coor)
+                )
+                neighbors
+  in
+    (*move current point in dir*)
+    let coor = move_in_dir curr dir in 
+    
+    (* clean the next point *)
+    clean_a_tile state coor;
+    clean_the_region coor;
+    !(state.dirty_tiles) = 0
 
   in let play r = 
+    (* Initialize board and room rendering. 
+       Initialize state.
+       Display Vroomba at the initial tile *)
     let (lbc_board, tile_width) = draw_board r in
     draw_room r lbc_board tile_width;
-    (* TODO: Functions that need interfacing *)
-    let state = init_state r 
-    and starting_coor = (100, 100) in
-    display_vroomba;
+    
+    let state = initiate_state r in 
+    let starting_coor = !(state.current) |> coor_to_map_index r |>
+        get_abs lbc_board tile_width in
+    display_vroomba lbc_board tile_width starting_coor;
+
+    (* Ask for user input. If the move is valid, update the display 
+       of the Vroomba tile and neighbouring tiles that have been cleaned. 
+       Record the move. Check whether the room is finished, and if it is,
+       check for the user input to proceed with the next room.
+
+       If the move isn't valid, there is no display update. Don't record 
+       the move. *)
+
+    (*  *)
+
+    let moves = ref [] in 
     wait_until_q_pressed ()
 
   in let poly_list = file_to_polygons input_path 
