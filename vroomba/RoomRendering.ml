@@ -122,6 +122,18 @@ let render_games_eg2 (input_path: string) (output_path : string) =
   (* ***************************** Move list *****************************  *)
   
   (* ***************************** Keyboard input **************************  *)
+
+
+    (* Ask for user input. If the user requests to go to a tile, update the display 
+       of the Vroomba tile. Clean the neighbouring tiles of the next tile and
+       display them as clean.
+
+       Record the move. Check whether the room is finished, and if it is,
+       check for the user input to proceed with the next room.
+
+       If the move isn't valid (it's not a tile), 
+       there is no display update. Don't record the move. *)
+
   in let rec wait_until_q_pressed r curr_coor state move_list sol_list lbc_board tile_width =
 
     let check_room_finished state = ()
@@ -130,9 +142,6 @@ let render_games_eg2 (input_path: string) (output_path : string) =
     (* Ask for user input *)
     in 
     
-    let check_next_valid r curr_coor move = 
-      let next_coor = move_in_dir curr_coor move in 
- 
     let event = wait_next_event [Key_pressed] in
     if event.key == 'q' then 
       begin 
@@ -173,28 +182,10 @@ let render_games_eg2 (input_path: string) (output_path : string) =
 
     else wait_until_q_pressed r curr_coor state move_list sol_list lbc_board tile_width
 
-    (* Ask for user input. If the user requests to go to a tile, update the display 
-       of the Vroomba tile. Clean the neighbouring tiles of the next tile and
-       display them as clean.
-
-       Record the move. Check whether the room is finished, and if it is,
-       check for the user input to proceed with the next room.
-
-       If the move isn't valid (it's not a tile), 
-       there is no display update. Don't record the move. *)
-
   in 
 
     (* ***************************** Keyboard input **************************  *)
 
-    (* if event.key == 'q' then close_graph () else
-    begin
-    let move = match event.key with 
-      | 'w' -> Up
-      | 'a' -> Left
-      | 's' -> Down
-      | 'd' -> Right
-      | _ -> wait_until_q_pressed r curr_coor state lbc_board tile_width *)
     
     
     (* Clean the neighbouring tiles of the next tile *)
