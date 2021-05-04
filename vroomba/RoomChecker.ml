@@ -80,16 +80,6 @@ let initiate_state room =
     table =  ht;
     dirty_tiles = ref num
   }
-  
-let%test "test_initial_state" =
-  let input  = BinaryEncodings.find_file "../../../resources/basic.txt" in
-  let polygon_list = file_to_polygons input in
-  let p = List.hd polygon_list in
-  let room = polygon_to_room p in 
-  let state = initiate_state room in
-  !(state.current) = (0,0) &&
-  !(state.dirty_tiles) = 20
-
 
 (*********************************************)
 (*            Checking solution              *)
@@ -114,6 +104,10 @@ let string_to_solution (s: string) : move list option =
   with error ->
     None
 
+let write_solution_to_file (moves : move list) (path : string) : unit = 
+  let buffer = Buffer.create 1 in
+  List.iter (fun e -> Buffer.add_string buffer (pp_move e)) moves;
+  ReadingFiles.write_string_to_file path (Buffer.contents buffer)
 
 let moves_to_string ls =
   let buffer = Buffer.create 1 in
@@ -248,13 +242,21 @@ let check_runner input_file solutions_file =
       then Printf.printf "%d: %d \n" !num (String.length s)
       else Printf.printf "%d: Fail \n" !num;
       num := !num + 1) polygon_ls solutions_ls
-      
+
+  
+let%test "test_initial_state" =
+  let input  = BinaryEncodings.find_file "../../../resources/basic.txt" in
+  let polygon_list = file_to_polygons input in
+  let p = List.hd polygon_list in
+  let room = polygon_to_room p in 
+  let state = initiate_state room in
+  !(state.current) = (0,0) &&
+  !(state.dirty_tiles) = 20
+
 let%test _ = 
   let s = "(0, 0); (6, 0); (6, 1); (8, 1); (8, 2); (6, 2); (6, 3); (0, 3)" in
   let room = string_to_polygon s |> get_exn |> polygon_to_room in
   validate room "WDDDDDD" 
-
-(* TODO: Add more tests *)
 
 let%test "string_to_solution & moves_to_string 1" =
   let input  = BinaryEncodings.find_file "../../../resources/basic.sol" in
@@ -274,8 +276,8 @@ let%test "string_to_solution & moves_to_string 2" =
 let%test "test_checker_simple 1" = 
   let s = "(0, 0); (1, 0); (1, 1); (0, 1)" in
   let room = string_to_polygon s |> get_exn |> polygon_to_room in
-  validate room ""  ;;
-
+  validate room ""
+    
 let%test "test_checker_simple 2" = 
   let s = "(0, 0); (2, 0); (2, 2); (0, 2)" in
   let room = string_to_polygon s |> get_exn |> polygon_to_room in

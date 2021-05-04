@@ -23,8 +23,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *)
 
-(* HOLA *)
-
 include Util
 open ArrayUtil
 open Rooms
@@ -38,13 +36,6 @@ include Polygons
 (*********************************************)
 (*           Gamifying the solver            *)
 (*********************************************)
-(* TODO: Implement more functions! *)
-
-let write_solution_to_file (moves : move list) (path : string) : unit = 
-  let buffer = Buffer.create 1 in
-  List.iter (fun e -> Buffer.add_string buffer (pp_move e)) moves;
-  ReadingFiles.write_string_to_file path (Buffer.contents buffer)
-
 
 
 (* Helper functions *)
@@ -57,10 +48,31 @@ let print_tuple (x,y) =
   Printf.printf "(%d, %d)\n" x y 
 
 
+(* There's probably a better way of doing this but we're short 
+ * on time and unfamiliar with Core functions *)
+let write_solution_to_file_appendable moves path =
+  let init =
+    try (BinaryEncodings.read_file_to_single_string path)
+    with Failure _ -> "" in
+  let buffer = Buffer.create 1 in
+  List.iter (fun e -> Buffer.add_string buffer (pp_move e)) moves;
+  let new_string = Buffer.contents buffer in
+  let full =
+    if init = ""
+    then new_string
+    else init ^ "\n" ^ new_string in
+  ReadingFiles.write_string_to_file path full
+ 
 (* Top-level funciton *)
 (* let render_games_eg2 (input_path: string) (output_path : string): unit =  *)
-let render_games_eg2 (input_path: string) (output_path : string) = 
+let render_games (input_path: string) (output_path : string) = 
 
+  ReadingFiles.write_string_to_file output_path "";
+  
+  (* a bit costly to do this at first instead of at each room *)
+  let poly_list = file_to_polygons input_path in
+  let room_arr = List.map polygon_to_room poly_list |> list_to_array in
+                  
   (* ***************************** GRAPHICS *****************************  *)
   let get_abs (ox,oy) t_width (x,y) = 
     ox + t_width * x, oy + t_width * y
@@ -95,16 +107,9 @@ let render_games_eg2 (input_path: string) (output_path : string) =
        set_color Graphics.green;
        fill_rect x y tile_width tile_width 
 
+
   (* ***************************** GRAPHICS *****************************  *)
 
-  (* ***************************** Move list *****************************  *)
-  (* in let sol_list = ref []
-     in let save_moves m_list = 
-     String.concat "" (List.rev m_list)
-
-     in let output_sol_list output_path sol_list = 
-     write_strings_to_file output_path sol_list  *)
-  (* ***************************** Move list *****************************  *)
 
   (* ***************************** Keyboard input **************************  *)
 
@@ -119,116 +124,117 @@ let render_games_eg2 (input_path: string) (output_path : string) =
      If the move isn't valid (it's not a tile), 
      there is no display update. Don't record the move. *)
 
-  in let rec wait_until_q_pressed r curr_coor state move_list lbc_board tile_width =
+  in let rec wait_until_q_pressed r curr_coor state move_list lbc_board tile_width r_arr i =
        
-
-       (* let workflow =  *)
        (* Ask for user input *)
-        
 
        let event = wait_next_event [Key_pressed] in
-       if event.key == 'q' then 
-         begin
-           write_solution_to_file (List.rev move_list) output_path;
-           close_graph ()
-         end
-       else
-       if List.mem event.key ['a'; 's'; 'd'; 'w'] then 
-         begin
-           let m = match event.key with 
-             | 'w' -> RoomChecker.Up
-             | 'a' -> Left
-             | 's' -> Down
-             | 'd' -> Right
-             | _ -> error "Unrecognizable move!" 
-           in let next_coor = move_in_dir curr_coor m in
-           if not (exist_in_room r next_coor)
-           then wait_until_q_pressed r curr_coor 
-               state move_list lbc_board tile_width
-           else 
-             begin
-               let next_abs = get_abs_from_coor r lbc_board tile_width next_coor in
-               (* Update the current position of the state *)
-               state.current := next_coor;
-               
-               (* Clean the tile and the neighbouring tiles. 
+       if event.key == 'q'
+       then (write_solution_to_file_appendable (List.rev move_list) output_path;
+             close_graph ())
+       else if event.key == 'n'
+       then begin
+         write_solution_to_file_appendable (List.rev move_list) output_path;
+         close_graph ();
+         play r_arr (i + 1)
+       end
+       else if List.mem event.key ['a'; 's'; 'd'; 'w']
+       then begin
+         let m = match event.key with 
+           | 'w' -> RoomChecker.Up
+           | 'a' -> Left
+           | 's' -> Down
+           | 'd' -> Right
+           | _ -> error "Unrecognizable move!" 
+         in let next_coor = move_in_dir curr_coor m in
+         if not (exist_in_room r next_coor)
+         then wait_until_q_pressed r curr_coor 
+             state move_list lbc_board tile_width r_arr i
+         else begin
+           let next_abs = get_abs_from_coor r lbc_board tile_width next_coor in
+           (* Update the current position of the state *)
+           state.current := next_coor;
+           
+           (* Clean the tile and the neighbouring tiles. 
                 * Then reflect the cleaning on the renderng. *)
-               clean_a_tile state next_coor;
-               display_vroomba tile_width next_abs; 
-               let neighbors = get_eight_neighbors next_coor in
-               List.iter (fun n -> 
-                   let n_abs = get_abs_from_coor r lbc_board tile_width n in
-                   if exist_in_room r n
-                   then 
-                     (if reachable r next_coor n
-                      then (clean_a_tile state n;
-                            draw_clean tile_width n_abs))
-                 ) neighbors;
-               
-               let move_list' = (m :: move_list) in
-               if !(state.dirty_tiles) = 0
-               then write_solution_to_file (List.rev move_list') output_path;
-               wait_until_q_pressed r next_coor
-                 state move_list' lbc_board tile_width
-             end
+           clean_a_tile state next_coor;
+           display_vroomba tile_width next_abs; 
+           let neighbors = get_eight_neighbors next_coor in
+           List.iter (fun n -> 
+               let n_abs = get_abs_from_coor r lbc_board tile_width n in
+               if exist_in_room r n
+               then 
+                 (if reachable r next_coor n
+                  then (clean_a_tile state n;
+                        draw_clean tile_width n_abs))
+             ) neighbors;
+           
+           let move_list' = (m :: move_list) in
+           wait_until_q_pressed r next_coor
+             state move_list' lbc_board tile_width r_arr i
          end
-
+       end
+       
 
        (* Other keys *)
        else wait_until_q_pressed r curr_coor state
-           move_list lbc_board tile_width
+           move_list lbc_board tile_width r_arr i
+           
 
-  in 
 
   (* ***************************** Keyboard input **************************  *)
+           
 
-
-  let play r = 
+  and play r_arr i = 
     (* Initialize board and room rendering. 
        Initialize state.
        Display Vroomba at the initial tile *)
+    if i < Array.length r_arr
+    then begin
+      let r = r_arr.(i) in
 
-    let (lbc_board, tile_width) = draw_board r in
-    draw_room r lbc_board tile_width;
+      let (lbc_board, tile_width) = draw_board r in
+      draw_room r lbc_board tile_width;
 
-    (* print instructions on interface *)
-    set_color Graphics.black;
-    moveto 200 750;
-    draw_string "Press 'n' to save your solution and go to the next room";
-    moveto 200 760;
-    draw_string "Press 'w', 's', 'a', 'd' to go up, down, left and right";
+      (* print instructions on interface *)
+      set_color Graphics.black;
+      moveto 200 750;
+      draw_string "Press 'n' to save your solution and go to the next room";
+      moveto 200 760;
+      draw_string "Press 'w', 's', 'a', 'd' to go up, down, left and right";
+      moveto 200 770;
+      draw_string "Press 'q' to save your solution and exit the game";
+
+      let state = initiate_state r in 
+      let starting_coor = !(state.current) in 
+      let starting_abs = starting_coor  |> coor_to_map_index r |>
+                         get_abs lbc_board tile_width in
+      display_vroomba tile_width starting_abs;
+
+      (* Clean the first tile and its neighboring tiles *)
+      clean_a_tile state starting_coor;
+
+      let neighbors = get_eight_neighbors starting_coor in
+      List.iter (fun n -> 
+          let n_abs = get_abs_from_coor r lbc_board tile_width n in
+          if exist_in_room r n
+          then 
+            (if reachable r starting_coor n
+             then clean_a_tile state n;
+             draw_clean tile_width n_abs)
+        )
+        neighbors;
+
+      if !(state.dirty_tiles) == 0
+      then write_solution_to_file_appendable [] output_path;
+
+      wait_until_q_pressed r starting_coor state [] lbc_board tile_width r_arr i
+    end
     
-    let state = initiate_state r in 
-    let starting_coor = !(state.current) in 
-    let starting_abs = starting_coor  |> coor_to_map_index r |>
-                       get_abs lbc_board tile_width in
-    display_vroomba tile_width starting_abs;
+  in play room_arr 0
 
-    (* Clean the first tile and its neighboring tiles *)
-    clean_a_tile state starting_coor;
-
-    let neighbors = get_eight_neighbors starting_coor in
-    List.iter (fun n -> 
-        let n_abs = get_abs_from_coor r lbc_board tile_width n in
-        if exist_in_room r n
-        then 
-          (if reachable r starting_coor n
-           then clean_a_tile state n;
-           draw_clean tile_width n_abs)
-      )
-      neighbors;
-
-    if !(state.dirty_tiles) == 0
-    then write_solution_to_file [] output_path;
-    
-    wait_until_q_pressed r starting_coor state [] lbc_board tile_width
-
-  (* file i/o *)
-  in let poly_list = file_to_polygons input_path 
-  in let room_arr = List.map polygon_to_room poly_list |> list_to_array
-  in Array.iter play room_arr
-
+(* testing for ourselves
 let try_eg_2 input =
   let f = BinaryEncodings.find_file "resources/" ^ input ^ ".txt" in 
-  render_games_eg2 f "resources/test.sol"
-
+  render_games f "resources/test.sol"
+*)
