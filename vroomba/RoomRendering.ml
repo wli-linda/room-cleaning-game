@@ -137,7 +137,7 @@ let render_games_eg2 (input_path: string) (output_path : string) =
       let next_coor = move_in_dir curr_coor move in
       (* if the next position is a tile AND reachable from the current
         tile, then move Vroomba *)
-      if exist_in_room r next_coor && reachable_2 r curr_coor next_coor then
+      if exist_in_room r next_coor && reachable r curr_coor next_coor then
       let next_abs = next_coor |> get_abs_from_coor r lbc_board tile_width in 
       display_vroomba lbc_board tile_width next_abs
 
@@ -149,7 +149,7 @@ let render_games_eg2 (input_path: string) (output_path : string) =
       List.iter (fun n -> 
                 if exist_in_room r n
                 then 
-                  (if reachable_2 r coor n
+                  (if reachable r coor n
                   then clean_a_tile state n)
                 )
                 neighbors;
@@ -163,7 +163,8 @@ let render_games_eg2 (input_path: string) (output_path : string) =
       let next_coor = move_in_dir curr_coor move in 
       let event = wait_next_event [Key_pressed] in
       if event.key == 'q' then close_graph () else
-      if List.mem event.key ['a'; 's'; 'd'; 'w'] then 
+      if List.mem event.key ['a'; 's'; 'd'; 'w'] 
+      then 
       begin
       let move = match event.key with 
         | 'w' -> Up
