@@ -70,8 +70,8 @@ type state = {
 
 
 let initiate_state room =
-  let num = get_tiles_num_2 room in
-  let all_tiles = get_all_tiles_no_shift_2 room in
+  let num = get_tiles_num room in
+  let all_tiles = get_all_tiles_no_shift room in
   let ht = HygieneTable.mk_new_table num in
   List.iter (fun coor -> HygieneTable.insert ht coor Dirty) all_tiles;
   let starting_point = (0,0) in
@@ -85,7 +85,7 @@ let%test "test_initial_state" =
   let input  = BinaryEncodings.find_file "../../../resources/basic.txt" in
   let polygon_list = file_to_polygons input in
   let p = List.hd polygon_list in
-  let room = polygon_to_room_2 p in 
+  let room = polygon_to_room p in 
   let state = initiate_state room in
   !(state.current) = (0,0) &&
   !(state.dirty_tiles) = 20
@@ -165,7 +165,7 @@ let check_solution (r: room) (moves: move list) : bool =
     if not (exist_in_room r curr)
     then success := false
     else 
-      (if not (cleanable_no_shift_2 r curr)
+      (if not (cleanable_no_shift r curr)
       then success := false 
       else clean_a_tile state curr
       ) 
@@ -176,7 +176,7 @@ let check_solution (r: room) (moves: move list) : bool =
     List.iter (fun coor -> 
               if exist_in_room r coor
               then 
-                (if reachable_2 r curr coor
+                (if reachable r curr coor
                 then clean_a_tile state coor)
               )
               neighbors;
@@ -207,7 +207,7 @@ let check_runner input_file solutions_file =
   let solutions_ls = BinaryEncodings.read_file_to_strings solutions_file in
   let num = ref 1 in
   List.iter2 (fun p s ->
-      let r = polygon_to_room_2 p in
+      let r = polygon_to_room p in
       if validate r s
       then Printf.printf "%d: %d \n" !num (String.length s)
       else Printf.printf "%d: Fail \n" !num;
@@ -215,44 +215,44 @@ let check_runner input_file solutions_file =
       
 let%test _ = 
   let s = "(0, 0); (6, 0); (6, 1); (8, 1); (8, 2); (6, 2); (6, 3); (0, 3)" in
-  let room = string_to_polygon s |> get_exn |> polygon_to_room_2 in
+  let room = string_to_polygon s |> get_exn |> polygon_to_room in
   validate room "WDDDDDD" 
 
 (* TODO: Add more tests *)
 
 let%test "test_checker_simple 1" = 
   let s = "(0, 0); (1, 0); (1, 1); (0, 1)" in
-  let room = string_to_polygon s |> get_exn |> polygon_to_room_2 in
+  let room = string_to_polygon s |> get_exn |> polygon_to_room in
   validate room "" 
 
 let%test "test_checker_simple 2" = 
   let s = "(0, 0); (2, 0); (2, 2); (0, 2)" in
-  let room = string_to_polygon s |> get_exn |> polygon_to_room_2 in
+  let room = string_to_polygon s |> get_exn |> polygon_to_room in
   validate room "" 
 
 let%test "test_checker_simple 3" = 
   let s = "(0, 0); (1, 0); (1, 1); (2, 1); (2, 2); (0, 2)" in
-  let room = string_to_polygon s |> get_exn |> polygon_to_room_2 in
+  let room = string_to_polygon s |> get_exn |> polygon_to_room in
   validate room "W" 
 
 let%test "test_checker_simple 3 neg" = 
   let s = "(0, 0); (1, 0); (1, 1); (2, 1); (2, 2); (0, 2)" in
-  let room = string_to_polygon s |> get_exn |> polygon_to_room_2 in
+  let room = string_to_polygon s |> get_exn |> polygon_to_room in
   not (validate room "") 
 
 let%test "test_checker_simple 4" = 
   let s = "(0, 0); (0, 3); (1, 3); (1, 0)" in
-  let room = string_to_polygon s |> get_exn |> polygon_to_room_2 in
+  let room = string_to_polygon s |> get_exn |> polygon_to_room in
   validate room "W" 
 
 let%test "test_checker_simple 4 neg" = 
   let s = "(0, 0); (0, 3); (1, 3); (1, 0)" in
-  let room = string_to_polygon s |> get_exn |> polygon_to_room_2 in
+  let room = string_to_polygon s |> get_exn |> polygon_to_room in
   not (validate room "") 
 
 let%test "test_checker_basic_negative" = 
   let s = "(0, 0); (6, 0); (6, 1); (8, 1); (8, 2); (6, 2); (6, 3); (0, 3)" in
-  let room = string_to_polygon s |> get_exn |> polygon_to_room_2 in
+  let room = string_to_polygon s |> get_exn |> polygon_to_room in
   not (validate room "WWWWDDDDD") &&
   not (validate room "WWDDAD")
 
@@ -260,7 +260,7 @@ let%test "test_checker_rooms_negative" =
   let input  = BinaryEncodings.find_file "../../../resources/rooms.txt" in
   let polygon_list = file_to_polygons input in
   List.for_all (fun p -> 
-                    let room = polygon_to_room_2 p in 
+                    let room = polygon_to_room p in 
                     not (validate room "W") ) 
   polygon_list
 
@@ -268,7 +268,7 @@ let%test "test_checker_rooms_negative" =
   let input  = BinaryEncodings.find_file "../../../resources/rooms.txt" in
   let polygon_list = file_to_polygons input in
   List.for_all (fun p -> 
-                    let room = polygon_to_room_2 p in 
+                    let room = polygon_to_room p in 
                     not (validate room "W") ) 
   polygon_list
 

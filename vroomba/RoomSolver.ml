@@ -236,7 +236,7 @@ let solve_runner input_file output_file =
   let polygon_ls = file_to_polygons input_file in
   let res = ref [] in
   List.iter (fun p ->
-      let r = polygon_to_room_2 p in
+      let r = polygon_to_room p in
       let moves = solve_room r in
       let s = moves_to_string moves in
       res := s :: !res) polygon_ls;
@@ -249,19 +249,19 @@ let solve_runner input_file output_file =
     
 let%test "Basic room solver testing 1" =
   let ls = [(0, 0); (6, 0); (6, 1); (8, 1); (8, 2); (6, 2); (6, 3); (0, 3)] in
-  let r = Polygons.polygon_of_int_pairs ls |> polygon_to_room_2 in
+  let r = Polygons.polygon_of_int_pairs ls |> polygon_to_room in
   let moves = solve_room r in
   check_solution r moves
     (*
 let%test "Basic room solver testing 2" =
   let ls = [(0, 0); (2, 0); (2, 2); (0, 2)] in
-  let r = Polygons.polygon_of_int_pairs ls |> polygon_to_room_2 in
+  let r = Polygons.polygon_of_int_pairs ls |> polygon_to_room in
   let moves = solve_room r in
   check_solution r moves && moves = []
                             *)        
 let%test "Basic room solver testing 3" =
   let ls = [(0, 0); (1, 0); (1, 1); (2, 1); (2, 2); (0, 2)] in
-  let r = Polygons.polygon_of_int_pairs ls |> polygon_to_room_2 in
+  let r = Polygons.polygon_of_int_pairs ls |> polygon_to_room in
   let moves = solve_room r in
   check_solution r moves
     
@@ -269,7 +269,7 @@ let%test "Basic room solver testing with rooms.txt" =
   let input  = BinaryEncodings.find_file "../../../resources/rooms.txt" in
   let polygon_list = file_to_polygons input in
   List.for_all (fun p ->
-      let r = polygon_to_room_2 p in
+      let r = polygon_to_room p in
       let moves = solve_room r in
       check_solution r moves) polygon_list
       
@@ -292,6 +292,6 @@ let%test "Randomised solver testing 4" =
   let input  = BinaryEncodings.find_file "../../../resources/test_generate_l.txt" in
   let polygon_list = file_to_polygons input in
   List.for_all (fun p ->
-      let r = polygon_to_room_2 p in
+      let r = polygon_to_room p in
       let moves = solve_room r in
       check_solution r moves) polygon_list

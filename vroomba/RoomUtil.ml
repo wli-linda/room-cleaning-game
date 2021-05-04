@@ -158,7 +158,7 @@ A tile is cleanable if:
 (* If a tile's 4 corners are on the edges, check whether the centre
   of the tile is within the polygon  *)
 
-let cleanable_no_shift_2 room relative_coor : bool =
+let cleanable_no_shift room relative_coor : bool =
   let (x,y) = relative_coor in
   let corners = [|(x, y); (x, y+1); (x+1, y); (x+1, y+1)|] in 
   let inside = ref true and 
@@ -191,22 +191,22 @@ let cleanable_no_shift_2 room relative_coor : bool =
     relative coordinates of left bottom corners, not absolute 
     coordinates as in get_all_tiles *)
 
-let get_all_tiles_no_shift_2 room = 
+let get_all_tiles_no_shift room = 
   let tiles = ref [] in
   let map = room.map in
   let len = Array.length map in
   for x = 0 to len - 1 do 
     for y = 0 to len - 1 do 
       let coor = (x, y) in
-      if cleanable_no_shift_2 room coor 
+      if cleanable_no_shift room coor 
       then tiles := coor :: !tiles
     done;
   done;
   !tiles
 
 
-let get_tiles_num_2 room =
-  let tiles = get_all_tiles_no_shift_2 room in
+let get_tiles_num room =
+  let tiles = get_all_tiles_no_shift room in
   List.length tiles
 
 (* is a neighbor tile reachable from the current tile
@@ -217,21 +217,21 @@ A diagonal tile is reachable if:
 1. It is cleanable (aka. is a room tile) &&
 2. Its two neighbors in the same 2x2 square as the current tile are cleanable *)
 
-let reachable_2 room coor neighbor = 
+let reachable room coor neighbor = 
   let (a, b) = coor in 
   let (c, d) = neighbor in
   let (dx, dy) = (c-a, d-b) in
 
   (* the neighbor is a tile *)
-  cleanable_no_shift_2 room neighbor &&
+  cleanable_no_shift room neighbor &&
 
   begin
     (*the neighbor is next-door -> reachable *)
     ((abs dx = 1 && dy = 0) || (dx = 0 && abs dy = 1)) ||
     (*the neighbor is diagonal to current tile*)
     begin 
-    (cleanable_no_shift_2 room (a, d)) &&
-    (cleanable_no_shift_2 room (c, b))
+    (cleanable_no_shift room (a, d)) &&
+    (cleanable_no_shift room (c, b))
     end
   end
 
@@ -244,8 +244,8 @@ let%test "test_get_tiles_num" =
   let input  = BinaryEncodings.find_file "../../../resources/basic.txt" in
   let polygon_list = file_to_polygons input in
   let p = List.hd polygon_list in
-  let room = polygon_to_room_2 p in 
-  let num = get_tiles_num_2 room in
+  let room = polygon_to_room p in 
+  let num = get_tiles_num room in
   num = 20
 
 
@@ -253,23 +253,23 @@ let%test "test_get_all_points" =
   let input  = BinaryEncodings.find_file "../../../resources/basic.txt" in
   let polygon_list = file_to_polygons input in
   let p = List.hd polygon_list in
-  let room = polygon_to_room_2 p in 
+  let room = polygon_to_room p in 
   let all_points = get_all_points room in
   let num = List.length all_points in 
   num = 81
 
 let%test "test_reachable" = 
   let s = "(0, 0); (1, 0); (1, 1); (2, 1); (2, 2); (0, 2)" in
-  let room = string_to_polygon s |> get_exn |> polygon_to_room_2 in
-  reachable_2 room (0, 0) (0, 1) &&
-  not (reachable_2 room (0, 0) (1, 1)) 
+  let room = string_to_polygon s |> get_exn |> polygon_to_room in
+  reachable room (0, 0) (0, 1) &&
+  not (reachable room (0, 0) (1, 1)) 
 
 let%test "test_cleanable" = 
   let s = "(0, 0); (1, 0); (1, 1); (2, 1); (2, 2); (0, 2)" in
-  let room = string_to_polygon s |> get_exn |> polygon_to_room_2 in
-  cleanable_no_shift_2 room (0, 0) &&
-  cleanable_no_shift_2 room (0, 1) &&
-  cleanable_no_shift_2 room (1, 1) &&
-  not (cleanable_no_shift_2 room (1,0)) &&
-  not (cleanable_no_shift_2 room (2,1)) &&
-  not (cleanable_no_shift_2 room (2,2))
+  let room = string_to_polygon s |> get_exn |> polygon_to_room in
+  cleanable_no_shift room (0, 0) &&
+  cleanable_no_shift room (0, 1) &&
+  cleanable_no_shift room (1, 1) &&
+  not (cleanable_no_shift room (1,0)) &&
+  not (cleanable_no_shift room (2,1)) &&
+  not (cleanable_no_shift room (2,2))
