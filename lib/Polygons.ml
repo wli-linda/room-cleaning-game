@@ -295,7 +295,7 @@ let neighbours_on_different_sides ray pol p =
 
 (* Point within a polygon *)
 
-let choose_ray_angle pol = 
+(* let choose_ray_angle pol = 
   let edge_angles = 
     edges pol |>
     List.map (fun (Point (x1, y1), Point (x2, y2)) -> 
@@ -310,15 +310,68 @@ let choose_ray_angle pol =
   let phi = List.find (fun c ->  List.for_all 
                           (fun a -> not (a =~= c)) 
                           edge_angles) candidate_angles in
-  phi
-      
-                    
+  phi *)
 
-let point_within_polygon pol p = 
-  let ray = (p, (choose_ray_angle pol)) in
+let choose_ray_angle pol p =
+  let Point (xp, yp) = p in
+  let edge_angles =
+    edges pol |>
+    List.map (fun (Point (x1, y1), Point (x2, y2)) ->
+        let dx = x2 -. x1 in
+        let dy = y2 -. y1 in
+        atan2 dy dx) in
+  let vertex_angles =
+    pol |> List.map (fun (Point (x1,y1)) ->
+                  let dy = y1 -. yp in
+                  let dx = x1 -. xp in
+                  atan2 dy dx) in
+  let n = 2 * (List.length pol) + 1 in
+  let candidate_angles =
+    iota (n + 1) |>
+    List.map (fun i ->
+      (float_of_int i) *. pi /. (float_of_int n)) in
+  let phi = List.find (fun c ->  List.for_all
+                          (fun a -> not (a =~= c))
+                          edge_angles &&
+                          List.for_all
+                          (fun a -> not (a =~= c))
+                          vertex_angles) candidate_angles in
+  phi
+
+(* Taken from lecture notes *)
+let point_within_polygon_2 pol p =
+  let ray = (p, (choose_ray_angle pol p)) in
   let es = edges pol in
   if List.mem p pol ||
      List.exists (fun e -> point_on_segment e p) es then true
+  else
+    begin
+      let n =
+        edges pol |>
+        List.map (fun e -> ray_segment_intersection ray e) |>
+        List.filter (fun r -> r <> None) |>
+        List.map (fun r -> get_exn r) |>
+
+        (* Intersecting a vertex *)
+        uniq |>
+
+        (* Touching vertices *)
+        List.filter (neighbours_on_different_sides ray pol) |>
+
+        (* Compute length *)
+        List.length
+      in
+      n mod 2 = 1
+    end
+
+(* **************** ZITING'S ADDITION **************** *)
+(* **************** From here onwards **************** *)
+(* 
+let point_within_polygon_2 pol p = 
+  let ray = (p, (choose_ray_angle pol)) in
+  let es = edges pol in
+  if List.mem p pol ||
+     List.exists (fun e -> point_on_segment e p) es then false
   else
     begin
       let n = 
@@ -337,7 +390,20 @@ let point_within_polygon pol p =
         List.length
       in
       n mod 2 = 1
-    end
+    end *)
+
+(* let%test "test_point_within_polygon" = 
+
+  let s = "(0, 0); (1, 0); (1, 1); (0, 1)" in
+  let room = string_to_polygon s |> get_exn |> polygon_to_room in
+  cleanable room (0, 0) &&
+  not (cleanable room (1,0)) &&
+  not (cleanable room (1,1)) &&
+  not (cleanable room (0,1))  ;; *)
+
+
+(* **************** ZITING'S ADDITION **************** *)
+(* **************** Till here **************** *)
 
 (*
 TODO: Test with the following points

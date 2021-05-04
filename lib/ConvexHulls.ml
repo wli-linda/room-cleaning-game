@@ -184,7 +184,7 @@ let test_random_ch n =
   let ps = gen_random_points n in 
   let ch = convex_hull ps in
   assert (is_convex ch);
-  assert (List.for_all (point_within_polygon ch) ps)
+  assert (List.for_all (point_within_polygon_2 ch) ps)
 
 
 

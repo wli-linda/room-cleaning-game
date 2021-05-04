@@ -27,7 +27,7 @@ open Util
 open Rooms
 open Polygons
 open ArrayUtil
-open RoomUtil 
+open RoomUtil
 (*********************************************)
 (*       Automated generation of rooms       *)
 (*********************************************)
@@ -163,7 +163,7 @@ let relocate_starting_point polygon =
   let len = List.length tiles in
   let (x,y) = List.nth tiles (Random.int len) in
   let polygon' = List.map (fun (a, b) -> (a - x, b - y)) p in
-  polygon_of_int_pairs polygon'
+  polygon_of_int_pairs polygon' 
 
 let generate_random_room (size : int) : room = 
 
@@ -369,7 +369,6 @@ let%test "Generated room is valid" =
     assert (valid_room r)
   done;
   true
-
 
 (* TODO: add more tests *)
 let%test "test_valid_room_simple" = 

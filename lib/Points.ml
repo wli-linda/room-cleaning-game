@@ -103,6 +103,8 @@ let draw_vector (Point (x, y)) =
 let (--) (Point (x1, y1)) (Point (x2, y2)) = 
   Point (x1 -. x2, y1 -. y2)
 
+let get_center p =
+  p ++ (0.5, 0.5)
 
 (***************************************)
 (* Scalar product and its applications *)

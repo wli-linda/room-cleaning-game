@@ -49,12 +49,29 @@ let mk_room size =
   for i = 0 to size - 1 do
     map.(i) <- Array.make size Outer
   done;
-  map.(0).(0) <- Edge;
   { map = map;
-    edges = ref [(0, 0)];
+    edges = ref [];
     shift = ref (0, 0)
   }
 
+(* let string_to_polygon_2 (s : string) : polygon option =
+  let extract_number string =
+
+  in  
+  let res = ref [] in
+  let coords = String.split_on_char ';' s in
+  try (
+    List.map (fun e -> String.split_on_char ',' e) coords |>
+    List.iter (fun ls ->
+        if List.length ls = 2
+        then begin
+          let x = extract_number @@ List.hd ls in
+          let y = extract_number @@ List.nth ls 1 in
+          res := (x, y) :: !res
+        end
+        else error "Ill-formed string!");
+    Some (polygon_of_int_pairs (List.rev !res)))
+  with error -> None *)
 
 (*  Read a polygon from a string of coordinates as in resources/basic.txt  *)
 (*  A string can be ill-formed! *)
@@ -64,19 +81,19 @@ let string_to_polygon (s : string) : polygon option =
     let int_offset = int_of_char '0' in
     let is_neg = ref false in
     let num = ref 0 in
-    for i = 1 to len - 1 do
-      let ch = string.[i] in
-      if i = 1 && ch = '(' then ()
-      else if (i = 1 && ch = '-') ||
-              (i = 2 && ch = '-' && string.[1] = '(')
+    let i = ref 0 in
+    while !i < len do
+      let ch = string.[!i] in
+      if ch = ' ' then ()
+      else if ch = '(' then ()
+      else if ch = '-'
       then is_neg := true
       else if int_of_char ch >= int_offset &&
               int_of_char ch <= int_offset + 9
       then num := !num * 10 + ((int_of_char ch) - int_offset)
-      else if i = len - 1 && ch = ')' then () (* I realize now that I can just
-                                               * use string_of_int here instead
-                                               * but for another day I guess *)
-      else error "Unrecognizable index!"
+      else if !i = len - 1 && ch = ')' then ()
+      else error "Unrecognizable index!";
+      i := !i + 1
     done;
     if !is_neg
     then 0 - !num
@@ -163,35 +180,36 @@ let fill_edges map ls =
       walk tl (x2, y2)
   in walk tl_init hd_init
 
-let fill_room map =
-  let len = Array.length map in
-  let fill_space x y =
-    let backtrack k' =
-      for i = 1 to k' - 1 do
-        map.(x + i).(y) <- Outer
-      done
-    in
-    let k = ref 1 in
-    while x + !k < len - 1 && not (map.(x + !k).(y) = Edge) do
-      if x + !k = len - 2 && not (map.(len - 1).(y) = Edge)
-      then (backtrack !k; k := len)
-      else (map.(x + !k).(y) <- Inner; k := !k + 1)
-    done;
-    while x + !k < len - 1 && map.(x + !k).(y) = Edge do
-      k := !k + 1
-    done;
-    x + !k
-  in
-  for j = 0 to len - 1 do
-    let i = ref 0 in
-    while !i < len - 2 do
-      if map.(!i).(j) = Edge && not (map.(!i + 1).(j) = Edge)
-      then i := 1 + fill_space !i j
-      else i := !i + 1
-    done
+
+(* **************** ZITING'S ADDITION **************** *)
+(* **************** From here onwards **************** *)
+
+let coor_to_point (x,y)=
+  Point (float_of_int x, float_of_int y)
+
+let map_index_to_coor room (x,y)  = 
+  let (minx, miny) = !(room.shift) in
+  (x + minx, y + miny)
+
+(* After the edges are already filled *)
+let fill_room room map edges =
+  let len = Array.length map in 
+  let pol = polygon_of_int_pairs edges in 
+  for i = 0 to len - 1 do
+    for j = 0 to len - 1 do
+      if map.(i).(j) <> Edge then
+      begin
+
+      (* test if the center is inside the polygon *)
+      if point_within_polygon_2 pol (map_index_to_coor room (i,j)
+      |> coor_to_point |> get_center)
+      then map.(i).(j) <- Inner
+      end
+    done 
   done
 
 (*  Convert a polygon to a room data type  *)
+
 let polygon_to_room (p: polygon) : room =
   (* get information about the polygon *)
   let pos_x = ref 0 in
@@ -226,8 +244,11 @@ let polygon_to_room (p: polygon) : room =
     r.shift := (!neg_x, !neg_y)
   end
   else fill_edges r.map !(r.edges);
-  fill_room r.map;
+  fill_room r r.map !(r.edges);
   r
+
+(* **************** ZITING'S ADDITION **************** *)
+(* **************** Till here **************** *)
 
 (*  Convert a room to a list of polygon coordinates  *)
 let room_to_polygon (r: room) : polygon = 
@@ -235,7 +256,6 @@ let room_to_polygon (r: room) : polygon =
 
 
 (* Tests *)
-
 
 let%test "test file_to_polygon & write_polygons_to_file" = 
   let input  = BinaryEncodings.find_file "../../../resources/rooms.txt" in
@@ -247,7 +267,17 @@ let%test "test file_to_polygon & write_polygons_to_file" =
   Sys.remove output;
   string = string'
 
-let%test "test polygon_to_room & room_to_polygon" = 
+let%test "test file_to_polygon & write_polygons_to_file random" = 
+  let input  = BinaryEncodings.find_file "../../../resources/test_generate_l.txt" in
+  let output = "test.tmp" in
+  let string = ReadingFiles.read_file_to_strings input in 
+  let polygon_list = file_to_polygons input in
+  write_polygons_to_file polygon_list output;
+  let string' = ReadingFiles.read_file_to_strings output in
+  Sys.remove output;
+  string = string'
+
+let%test "test polygon_to_room & room_to_polygon 1" = 
   let input  = BinaryEncodings.find_file "../../../resources/basic.txt" in
   let polygon_list = file_to_polygons input in
   List.for_all (fun p -> 
@@ -255,6 +285,24 @@ let%test "test polygon_to_room & room_to_polygon" =
                     let p' = room_to_polygon room in 
                     p = p') 
   polygon_list
+
+let%test "test polygon_to_room & room_to_polygon 2" = 
+  let input  = BinaryEncodings.find_file "../../../resources/rooms.txt" in
+  let polygon_list = file_to_polygons input in
+  List.for_all (fun p -> 
+      let room = polygon_to_room p in 
+      let p' = room_to_polygon room in 
+      p = p') 
+    polygon_list
+
+let%test "test polygon_to_room & room_to_polygon 3" = 
+  let input  = BinaryEncodings.find_file "../../../resources/test_generate_l.txt" in
+  let polygon_list = file_to_polygons input in
+  List.for_all (fun p -> 
+      let room = polygon_to_room p in 
+      let p' = room_to_polygon room in 
+      p = p') 
+    polygon_list
 
 let%test "test polygon_to_room & room_to_polygon negative" = 
   let input  = BinaryEncodings.find_file "../../../resources/invalid.txt" in
@@ -266,3 +314,4 @@ let%test "test polygon_to_room & room_to_polygon negative" =
                     p = p'
                     with Failure _ -> true) 
   polygon_list
+

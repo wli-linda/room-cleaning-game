@@ -29,7 +29,7 @@ open Rooms
 open Graphs
 open BetterHashTable
 open RoomGenerator
-open RoomUtil
+open RoomUtil 
 
 module HygieneTable = 
   ResizableListBasedHashTable(struct type t = (int * int) end)
@@ -114,6 +114,12 @@ let string_to_solution (s: string) : move list option =
   with error ->
     None
 
+
+let moves_to_string ls =
+  let buffer = Buffer.create 1 in
+  List.iter (fun m -> Buffer.add_string buffer (pp_move m)) ls;
+  Buffer.contents buffer
+
 let move_in_dir coor dir =
   let (x, y ) = coor in
   match dir with 
@@ -149,6 +155,34 @@ let clean_a_tile state coor =
   state.dirty_tiles := !(state.dirty_tiles) - 1;
   HygieneTable.insert ht coor Clean
 
+(*given current point & state & move, 
+return true if all tiles in the room have been cleaned.
+*)
+let move_and_clean room state curr dir = 
+  (*clean neighbors*)
+  let clean_the_region curr =
+      (* Check the eight neighbors *)
+      let neighbors = get_eight_neighbors curr in
+      List.iter (fun coor -> 
+                if exist_in_room room coor
+                then 
+                  (if reachable room curr coor
+                  then clean_a_tile state coor)
+                )
+                neighbors
+  in
+    (*move current point in dir*)
+    let coor = move_in_dir curr dir in 
+    
+    (* clean the next point *)
+    clean_a_tile state coor;
+    clean_the_region coor;
+    !(state.dirty_tiles) = 0
+
+
+
+
+
 
 (*  Check that the sequence of moves is valid  *)
 let check_solution (r: room) (moves: move list) : bool = 
@@ -158,15 +192,17 @@ let check_solution (r: room) (moves: move list) : bool =
   let success = ref true in
   while (!success && !remaining > 0) do
     begin
-
+  
     (* Check current point *)
     let curr = !(state.current) in
+(*     let (x, y) = curr in 
+    Printf.printf "currently at %d %d\n" x y; *)
     begin
     if not (exist_in_room r curr)
     then success := false
     else 
       (if not (cleanable r curr)
-      then success := false 
+      then ((* print_endline "not cleanable";  *)success := false)
       else clean_a_tile state curr
       ) 
     end ;
@@ -193,16 +229,26 @@ let check_solution (r: room) (moves: move list) : bool =
   done;
   if !(state.dirty_tiles) > 0 
   then false
-  else !success
+  else !success 
 
 
 (*  Top-level validator  *)
 let validate r s = 
   match string_to_solution s with
   | None -> false
-  | Some moves -> check_solution r moves
- 
+  | Some moves -> check_solution r moves 
 
+let check_runner input_file solutions_file =
+  let polygon_ls = file_to_polygons input_file in
+  let solutions_ls = BinaryEncodings.read_file_to_strings solutions_file in
+  let num = ref 1 in
+  List.iter2 (fun p s ->
+      let r = polygon_to_room p in
+      if validate r s
+      then Printf.printf "%d: %d \n" !num (String.length s)
+      else Printf.printf "%d: Fail \n" !num;
+      num := !num + 1) polygon_ls solutions_ls
+      
 let%test _ = 
   let s = "(0, 0); (6, 0); (6, 1); (8, 1); (8, 2); (6, 2); (6, 3); (0, 3)" in
   let room = string_to_polygon s |> get_exn |> polygon_to_room in
@@ -210,10 +256,25 @@ let%test _ =
 
 (* TODO: Add more tests *)
 
+let%test "string_to_solution & moves_to_string 1" =
+  let input  = BinaryEncodings.find_file "../../../resources/basic.sol" in
+  let s = BinaryEncodings.read_file_to_single_string input in
+  let moves = get_exn @@ string_to_solution s in
+  let s' = moves_to_string moves in
+  s = s'
+
+let%test "string_to_solution & moves_to_string 2" =
+  let input  = BinaryEncodings.find_file "../../../resources/rooms.sol" in
+  let ls = BinaryEncodings.read_file_to_strings input in
+  List.for_all (fun s ->
+      let moves = get_exn @@ string_to_solution s in
+      let s' = moves_to_string moves in
+      s = s') ls
+
 let%test "test_checker_simple 1" = 
   let s = "(0, 0); (1, 0); (1, 1); (0, 1)" in
   let room = string_to_polygon s |> get_exn |> polygon_to_room in
-  validate room "" 
+  validate room ""  ;;
 
 let%test "test_checker_simple 2" = 
   let s = "(0, 0); (2, 0); (2, 2); (0, 2)" in

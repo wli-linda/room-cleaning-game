@@ -27,6 +27,7 @@ open Printf
 open Util
 
 open Rooms
+open RoomChecker
 open RoomSolver
 open RoomRendering
 
@@ -51,8 +52,9 @@ let () =
       (* TODO: Implement exception handling if there is no such file *)
       let input_file = Sys.argv.(2) in
       let output_file = Sys.argv.(3) in
-      try (render_games input_file output_file) (* alt: find path? *)
-      with Failure _ -> error "No such file exists!"
+     (* try (render_games input_file output_file) (* alt: find path? *)
+        with Failure _ -> error "No such file exists!" *)
+      error "impl"
     else begin  
       if command = "generate"
       then
@@ -69,11 +71,12 @@ let () =
       else if command = "check"
       then
         let input_file = Sys.argv.(2) in
-        let output_file = Sys.argv.(3) in
-        error "impl"
+        let solutions_file = Sys.argv.(3) in
+        check_runner input_file solutions_file
       else if command = "solve"
       then
         let input_file = Sys.argv.(2) in
         let output_file = Sys.argv.(3) in
-        error "impl"
+        solve_runner input_file output_file
     end
+
