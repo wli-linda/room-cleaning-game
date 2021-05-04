@@ -196,8 +196,8 @@ let cleanable room coor =
         then 
           (let center = get_center (coor_to_point coor) in
           let polygon = room_to_polygon room in
-          true
-          (* point_within_polygon_2 polygon center *))
+
+          point_within_polygon_2 polygon center)
           (* if not all three corners are edges, check if they are all not Outer*)
         else List.for_all (fun n -> (get_pos room n != Outer)) corners
         end

@@ -52,29 +52,10 @@ type reached = White | Black
 let get_pos_map_index r (x, y) =
   let map = r.map in
   map.(x).(y)
-    
-let inside_room r coor : bool =
-  let (x, y) = coor in
-  if get_pos_map_index r (x, y) = Outer
-  then false
-  else begin
-    (get_pos_map_index r (x + 1, y) != Outer &&
-     get_pos_map_index r (x, y + 1) != Outer &&
-     get_pos_map_index r (x + 1, y + 1) != Outer)
-  end
-  
-let movable_coords r =
-  let ls = ref [] in
-  let map = r.map in
-  let len = Array.length map in
-  for x = 0 to len - 2 do
-    for y = 0 to len - 2 do
-      if inside_room r (x, y)
-      then ls := (map_index_to_coor r (x, y)) :: !ls
-    done
-  done;
-  List.rev !ls
-    
+
+let movable_coords r= 
+  get_all_tiles r
+
 let reachable' state coor neighbor = 
   let (a, b) = coor in 
   let (c, d) = neighbor in
@@ -116,7 +97,15 @@ let init_state r =
       dirty_tiles = ref num } in
   clean state start;
   state
-    
+
+let%test "test_reachable'" = 
+  let s = "(0, 0); (1, 0); (1, 1); (2, 1); (2, 2); (0, 2)" in
+  let room = string_to_polygon s |> get_exn |> polygon_to_room in
+  let state = init_state room in
+  reachable' state (0, 0) (0, 1) &&
+  not (reachable room (0, 0) (1, 1)
+  ) 
+
 let get_id ct coor = CoorTable.get ct coor
     
 let add_edges g ct coor =
