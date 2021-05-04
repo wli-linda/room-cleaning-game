@@ -80,24 +80,19 @@ let string_to_polygon (s : string) : polygon option =
     let len = String.length string in
     let int_offset = int_of_char '0' in
     let is_neg = ref false in
-    let num_started = ref false in
     let num = ref 0 in
     let i = ref 0 in
     while !i < len do
       let ch = string.[!i] in
-      if int_of_char ch >= int_offset &&
-         int_of_char ch <= int_offset + 9
-      then (num := !num * 10 + ((int_of_char ch) - int_offset);
-            num_started := true)
-      else if not !num_started
-      then begin
-        if ch = ' ' then ()
-        else if ch = '(' then ()
-        else if ch = '-'
-        then is_neg := true
-      end
-      else if !i = len - 1 && (ch = ')' || ch = ' ') then ()
-      else error "Unrecognizable string!";
+      if ch = ' ' then ()
+      else if ch = '(' then ()
+      else if ch = '-'
+      then is_neg := true
+      else if int_of_char ch >= int_offset &&
+              int_of_char ch <= int_offset + 9
+      then num := !num * 10 + ((int_of_char ch) - int_offset)
+      else if !i = len - 1 && ch = ')' then ()
+      else error "Unrecognizable index!";
       i := !i + 1
     done;
     if !is_neg

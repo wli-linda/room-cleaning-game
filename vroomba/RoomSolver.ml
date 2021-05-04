@@ -138,17 +138,6 @@ let solve_room (r: room) : move list =
   let moves = ref [] in
   let init_coor = get_exn @@ get_id ct !(state.current) in
   let get_coor g id = get_value @@ get_node g id in
-  
-  let rec check_hygiene ls =
-    match ls with
-    | [] -> None
-    | h :: tl ->
-      let coor = get_coor g h in
-      let is_cleaned = get_exn @@ HygieneTable.get ht coor in
-      if is_cleaned = Dirty
-      then Some h
-      else check_hygiene tl
-  in 
 
   (* TODO: DFS & BACKTRACKING *)
   let rec dfs_visit id =
@@ -264,7 +253,10 @@ let%test "Randomised solver testing 2" =
   let r = generate_random_room 30 in
   let moves = solve_room r in
   check_solution r moves
- 
+
+(* larger tests that take time during compiling; 
+ * commenting out for the sake of speed *)
+
 let%test "Randomised solver testing 3" = 
   let r = generate_random_room 100 in
   let moves = solve_room r in

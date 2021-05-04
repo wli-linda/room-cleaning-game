@@ -244,10 +244,9 @@ let check_runner input_file solutions_file =
   let num = ref 1 in
   List.iter2 (fun p s ->
       let r = polygon_to_room p in
-      try (if validate r s
-           then Printf.printf "%d: %d \n" !num (String.length s)
-           else Printf.printf "%d: Fail \n" !num)
-      with Failure _ -> Printf.printf "%d: Fail \n" !num;
+      if validate r s
+      then Printf.printf "%d: %d \n" !num (String.length s)
+      else Printf.printf "%d: Fail \n" !num;
       num := !num + 1) polygon_ls solutions_ls
       
 let%test _ = 
@@ -327,6 +326,3 @@ let%test "test_checker_rooms_negative" =
 let%test "test_checker_random_negative" = 
   let room = generate_random_room 100 in
   not (validate room "W")
-
-let%test "tests are working" =
-  false
