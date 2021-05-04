@@ -159,7 +159,7 @@ let take_steps_in_dir coor steps dir =
 let relocate_starting_point polygon = 
   let p = polygon_to_int_pairs polygon in
   let room = polygon_to_room polygon in
-  let tiles = get_all_tiles_no_shift room in
+  let tiles = get_all_tiles room in
   let len = List.length tiles in
   let (x,y) = List.nth tiles (Random.int len) in
   let polygon' = List.map (fun (a, b) -> (a - x, b - y)) p in
@@ -351,7 +351,8 @@ let valid_room (r: room) : bool =
   in
 
     let space_for_vroomba = 
-      cleanable_no_shift r (0,0)
+      let (x,y) = coor_to_map_index r (0,0) in
+      cleanable_no_shift r (x,y)
   in 
   no_intersect_or_collinear && space_for_vroomba
 end
@@ -359,7 +360,6 @@ end
 (*********************************************)
 (*                     Tests                 *)
 (*********************************************)
-
 
 
 let%test "Generated room is valid" = 

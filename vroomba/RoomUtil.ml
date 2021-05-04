@@ -273,3 +273,4 @@ let%test "test_cleanable" =
   not (cleanable_no_shift room (1,0)) &&
   not (cleanable_no_shift room (2,1)) &&
   not (cleanable_no_shift room (2,2))
+
