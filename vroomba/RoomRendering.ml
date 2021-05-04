@@ -86,7 +86,7 @@ let render_games_eg2 (input_path: string) (output_path : string) =
     (* Fill the room *)  
     let room_int_pairs_array_abs = get_edges_no_shift r |> list_to_array 
         |> Array.map (get_abs lbc_board tile_width) in
-    fill_poly_color ~color:(Graphics.yellow) room_int_pairs_array_abs;
+    fill_poly_color ~color:(Graphics.yellow) room_int_pairs_array_abs
 
     (* draw the lattices
     let all_tiles = get_all_tiles_no_shift_2 r |> list_to_array in
@@ -98,10 +98,15 @@ let render_games_eg2 (input_path: string) (output_path : string) =
     done *)
 
   (* TODO *)
-  in let draw_clean_boundary = ()
-  in let draw_dirty_boundary = () 
+  in let draw_clean tile_width (x,y) = 
+    set_color Graphics.blue;
+    fill_rect x y tile_width tile_width 
 
-  in let display_vroomba lbc_board tile_width (x,y) =
+  in let draw_dirty tile_width (x,y) =
+    set_color (rgb 255 255 204);
+    fill_rect x y tile_width tile_width 
+
+  in let display_vroomba tile_width (x,y) =
     set_color Graphics.green;
     fill_rect x y tile_width tile_width 
 
@@ -117,6 +122,57 @@ let render_games_eg2 (input_path: string) (output_path : string) =
   (* ***************************** Move list *****************************  *)
   
   (* ***************************** Keyboard input **************************  *)
+  in let rec wait_until_q_pressed r curr_coor state move_list sol_list lbc_board tile_width =
+
+    let check_room_finished state = ()
+    
+    (* let workflow =  *)
+    (* Ask for user input *)
+    in 
+    
+    let check_next_valid r curr_coor move = 
+      let next_coor = move_in_dir curr_coor move in 
+ 
+    let event = wait_next_event [Key_pressed] in
+    if event.key == 'q' then 
+      begin 
+      output_sol_list output_path sol_list;
+      close_graph ()
+      end
+    else
+    if List.mem event.key ['a'; 's'; 'd'; 'w'] then 
+    begin
+    let m = match event.key with 
+      | 'w' -> Up
+      | 'a' -> Left
+      | 's' -> Down
+      | 'd' -> Right
+      | _ -> error "Unrecognizable move!" 
+      in let next_coor = move_in_dir curr_coor m in
+      if not (exist_in_room r next_coor) then wait_until_q_pressed r curr_coor 
+         state move_list sol_list lbc_board tile_width
+      else 
+        let next_abs = get_abs_from_coor r lbc_board tile_width next_coor in
+        (* Update the current position of the state *)
+        state.current := next_coor;
+
+        (* Clean the tile and the neighbouring tiles. Then reflect the cleaning on the renderng. *)
+        clean_a_tile state next_coor;
+        draw_clean tile_width next_abs; 
+        let neighbors = get_eight_neighbors next_coor in
+        List.iter (fun n -> 
+                let n_abs = get_abs_from_coor r lbc_board tile_width n in
+                if exist_in_room r n
+                then 
+                  (if reachable_2 r next_coor n
+                  then clean_a_tile state n;
+                       draw_clean tile_width n_abs)
+                )
+                neighbors
+    end
+
+    else wait_until_q_pressed r curr_coor state move_list sol_list lbc_board tile_width
+
     (* Ask for user input. If the user requests to go to a tile, update the display 
        of the Vroomba tile. Clean the neighbouring tiles of the next tile and
        display them as clean.
@@ -127,59 +183,7 @@ let render_games_eg2 (input_path: string) (output_path : string) =
        If the move isn't valid (it's not a tile), 
        there is no display update. Don't record the move. *)
 
-  in let rec wait_until_q_pressed r curr_coor state lbc_board tile_width =
-
-    let check_room_finished state = ()
-
-    in let check_next_valid curr_coor move = 
-      let curr_index = curr_coor in 
-      let next_coor = move_in_dir curr_coor move in
-      (* if the next position is a tile AND reachable from the current
-        tile, then move Vroomba *)
-      if exist_in_room r next_coor && reachable_2 r curr_coor next_coor then
-      let next_abs = next_coor |> get_abs_from_coor r lbc_board tile_width in 
-      display_vroomba lbc_board tile_width next_abs
-
-    (* Clean the neighbours *)
-    in let clean_the_region coor state =
-      (* Check the eight neighbors *)
-      (* let map_index = coor_to_map_index r coor in *)
-      let neighbors = get_eight_neighbors coor in
-      List.iter (fun n -> 
-                if exist_in_room r n
-                then 
-                  (if reachable_2 r coor n
-                  then clean_a_tile state n)
-                )
-                neighbors;
-      state
-    
-    (* let workflow =  *)
-    (* Ask for user input *)
-    in 
-    
-    let check_next_valid r curr_coor move = 
-      let next_coor = move_in_dir curr_coor move in 
-      let 
-    let event = wait_next_event [Key_pressed] in
-    if event.key == 'q' then close_graph () else
-    if List.mem event.key ['a'; 's'; 'd'; 'w'] then 
-    begin
-    let move = match event.key with 
-      | 'w' -> Up
-      | 'a' -> Left
-      | 's' -> Down
-      | 'd' -> Right
-      | _ -> error "Unrecognizable move!" in 
-    end
-    else wait_until_q_pressed r curr_coor state lbc_board tile_width
-
-(*     
-    if event.key == 'w' then move := Up else
-    if event.key == 'd' then move := Right else
-    if event.key == 'a' then move := Left else
-    if event.key == 's' then move := Down else
-    wait_until_q_pressed r curr_coor state lbc_board tile_width *)
+  in 
 
     (* ***************************** Keyboard input **************************  *)
 
@@ -217,11 +221,14 @@ let render_games_eg2 (input_path: string) (output_path : string) =
     clean_the_region coor;
     !(state.dirty_tiles) = 0 *)
 
-  in let play r = 
+  let play r = 
     (* Initialize board and room rendering. 
        Initialize state.
        Display Vroomba at the initial tile *)
-    let (lbc_board, tile_width) = draw_board r in
+    
+
+
+    in let (lbc_board, tile_width) = draw_board r in
     draw_room r lbc_board tile_width;
     
     let state = initiate_state r in 
