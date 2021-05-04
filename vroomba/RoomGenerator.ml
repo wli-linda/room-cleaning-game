@@ -27,7 +27,7 @@ open Util
 open Rooms
 open Polygons
 open ArrayUtil
-open RoomUtil 
+open RoomUtil
 (*********************************************)
 (*       Automated generation of rooms       *)
 (*********************************************)
@@ -163,7 +163,7 @@ let relocate_starting_point polygon =
   let len = List.length tiles in
   let (x,y) = List.nth tiles (Random.int len) in
   let polygon' = List.map (fun (a, b) -> (a - x, b - y)) p in
-  polygon_of_int_pairs polygon'
+  polygon_of_int_pairs polygon' 
 
 let generate_random_room (size : int) : room = 
 
@@ -351,8 +351,7 @@ let valid_room (r: room) : bool =
   in
 
     let space_for_vroomba = 
-      let (x,y) = coor_to_map_index r (0,0) in
-      cleanable_no_shift r (x,y)
+      cleanable r (0,0)
   in 
   no_intersect_or_collinear && space_for_vroomba
 end

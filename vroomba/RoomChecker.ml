@@ -29,7 +29,7 @@ open Rooms
 open Graphs
 open BetterHashTable
 open RoomGenerator
-open RoomUtil  
+open RoomUtil 
 
 module HygieneTable = 
   ResizableListBasedHashTable(struct type t = (int * int) end)
@@ -149,6 +149,34 @@ let clean_a_tile state coor =
   state.dirty_tiles := !(state.dirty_tiles) - 1;
   HygieneTable.insert ht coor Clean
 
+(*given current point & state & move, 
+return true if all tiles in the room have been cleaned.
+*)
+let move_and_clean room state curr dir = 
+  (*clean neighbors*)
+  let clean_the_region curr =
+      (* Check the eight neighbors *)
+      let neighbors = get_eight_neighbors curr in
+      List.iter (fun coor -> 
+                if exist_in_room room coor
+                then 
+                  (if reachable room curr coor
+                  then clean_a_tile state coor)
+                )
+                neighbors
+  in
+    (*move current point in dir*)
+    let coor = move_in_dir curr dir in 
+    
+    (* clean the next point *)
+    clean_a_tile state coor;
+    clean_the_region coor;
+    !(state.dirty_tiles) = 0
+
+
+
+
+
 
 (*  Check that the sequence of moves is valid  *)
 let check_solution (r: room) (moves: move list) : bool = 
@@ -195,14 +223,14 @@ let check_solution (r: room) (moves: move list) : bool =
   done;
   if !(state.dirty_tiles) > 0 
   then false
-  else !success ;;
+  else !success 
 
 
 (*  Top-level validator  *)
 let validate r s = 
   match string_to_solution s with
   | None -> false
-  | Some moves -> check_solution r moves ;;
+  | Some moves -> check_solution r moves 
 
 let check_runner input_file solutions_file =
   let polygon_ls = file_to_polygons input_file in
@@ -276,4 +304,4 @@ let%test "test_checker_rooms_negative" =
 
 let%test "test_checker_random_negative" = 
   let room = generate_random_room 100 in
-  not (validate room "W")
+  not (validate room "W");;
