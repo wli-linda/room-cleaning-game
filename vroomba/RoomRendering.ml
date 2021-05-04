@@ -152,7 +152,7 @@ let render_games_eg2 (input_path: string) (output_path : string) =
     if List.mem event.key ['a'; 's'; 'd'; 'w'] then 
     begin
     let m = match event.key with 
-      | 'w' -> Up
+      | 'w' -> RoomChecker.Up
       | 'a' -> Left
       | 's' -> Down
       | 'd' -> Right
@@ -174,7 +174,7 @@ let render_games_eg2 (input_path: string) (output_path : string) =
                 let n_abs = get_abs_from_coor r lbc_board tile_width n in
                 if exist_in_room r n
                 then 
-                  (if reachable_2 r next_coor n
+                  (if reachable r next_coor n
                   then clean_a_tile state n;
                        draw_clean tile_width n_abs)
                 )
@@ -219,14 +219,15 @@ let render_games_eg2 (input_path: string) (output_path : string) =
               let n_abs = get_abs_from_coor r lbc_board tile_width n in
               if exist_in_room r n
               then 
-                (if reachable_2 r starting_coor n
+                (if reachable r starting_coor n
                 then clean_a_tile state n;
                       draw_clean tile_width n_abs)
               )
               neighbors;
 
-    (if !(state.dirty_tiles) == 0 then write_solution_to_file [] output_path
-    else wait_until_q_pressed r starting_coor state [] lbc_board tile_width);
+      (if !(state.dirty_tiles) == 0
+       then write_solution_to_file [] output_path
+       else wait_until_q_pressed r starting_coor state [] lbc_board tile_width);
 
     wait_until_q_pressed r starting_coor state [] lbc_board tile_width
     
