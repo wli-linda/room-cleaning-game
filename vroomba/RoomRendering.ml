@@ -23,6 +23,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *)
 
+(* HOLA *)
+
 include Util
 open ArrayUtil
 open Rooms
@@ -152,16 +154,32 @@ let render_games_eg2 (input_path: string) (output_path : string) =
                 neighbors;
       state
     
-    let workflow = 
+    (* let workflow =  *)
     (* Ask for user input *)
-    in let event = wait_next_event [Key_pressed] in
-    let move = ref Up in 
+    in 
+    
+    let check_next_valid r curr_coor move = 
+      let next_coor = move_in_dir curr_coor move in 
+      let 
+    let event = wait_next_event [Key_pressed] in
     if event.key == 'q' then close_graph () else
+    if List.mem event.key ['a'; 's'; 'd'; 'w'] then 
+    begin
+    let move = match event.key with 
+      | 'w' -> Up
+      | 'a' -> Left
+      | 's' -> Down
+      | 'd' -> Right
+      | _ -> error "Unrecognizable move!" in 
+    end
+    else wait_until_q_pressed r curr_coor state lbc_board tile_width
+
+(*     
     if event.key == 'w' then move := Up else
     if event.key == 'd' then move := Right else
     if event.key == 'a' then move := Left else
     if event.key == 's' then move := Down else
-    wait_until_q_pressed r curr_coor state lbc_board tile_width
+    wait_until_q_pressed r curr_coor state lbc_board tile_width *)
 
     (* ***************************** Keyboard input **************************  *)
 
