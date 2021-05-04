@@ -88,14 +88,15 @@ let render_games_eg2 (input_path: string) (output_path : string) =
         |> Array.map (get_abs lbc_board tile_width) in
     fill_poly_color ~color:(Graphics.yellow) room_int_pairs_array_abs
 
-    (* draw the lattices
-    let all_tiles = get_all_tiles_no_shift_2 r |> list_to_array in
+
+ (*    (* draw the lattices *)
+  let all_tiles = get_all_tiles_no_shift r |> list_to_array in
     set_color Graphics.black;
     for i = 0 to Array.length all_tiles - 1 do
       let (x,y) = all_tiles.(i) in 
       let (final_x, final_y) = get_abs lbc_board tile_width (x,y) in
       draw_rect final_x final_y tile_width tile_width
-    done *)
+    done  *)
 
   (* TODO *)
   in let draw_clean tile_width (x,y) = 
@@ -167,7 +168,7 @@ let render_games_eg2 (input_path: string) (output_path : string) =
 
         (* Clean the tile and the neighbouring tiles. Then reflect the cleaning on the renderng. *)
         clean_a_tile state next_coor;
-        draw_clean tile_width next_abs; 
+        display_vroomba tile_width next_abs; 
         let neighbors = get_eight_neighbors next_coor in
         List.iter (fun n -> 
                 let n_abs = get_abs_from_coor r lbc_board tile_width n in
@@ -177,7 +178,13 @@ let render_games_eg2 (input_path: string) (output_path : string) =
                   then clean_a_tile state n;
                        draw_clean tile_width n_abs)
                 )
-                neighbors
+                neighbors;
+
+        let move_list' = ((String.make 1 event.key) :: move_list) in
+        if !(state.dirty_tiles) == 0 then move_list'
+        else wait_until_q_pressed r next_coor state move_list' sol_list lbc_board tile_width
+
+
     end
 
     else wait_until_q_pressed r curr_coor state move_list sol_list lbc_board tile_width
@@ -186,31 +193,6 @@ let render_games_eg2 (input_path: string) (output_path : string) =
 
     (* ***************************** Keyboard input **************************  *)
 
-    
-    
-    (* Clean the neighbouring tiles of the next tile *)
-  
-  
-  (* in let move_and_clean room state curr dir = 
-  (*clean neighbors*)
-  let clean_the_region curr =
-      (* Check the eight neighbors *)
-      let neighbors = get_eight_neighbors curr in
-      List.iter (fun coor -> 
-                if exist_in_room room coor
-                then 
-                  (if reachable room curr coor
-                  then clean_a_tile state coor)
-                )
-                neighbors
-  in
-    (*move current point in dir*)
-    let coor = move_in_dir curr dir in 
-    
-    (* clean the next point *)
-    clean_a_tile state coor;
-    clean_the_region coor;
-    !(state.dirty_tiles) = 0 *)
 
   let play r = 
     (* Initialize board and room rendering. 
@@ -219,22 +201,24 @@ let render_games_eg2 (input_path: string) (output_path : string) =
     
 
 
-    in let (lbc_board, tile_width) = draw_board r in
+    let (lbc_board, tile_width) = draw_board r in
     draw_room r lbc_board tile_width;
     
     let state = initiate_state r in 
     let starting_coor = !(state.current) in 
     let starting_abs = starting_coor  |> coor_to_map_index r |>
         get_abs lbc_board tile_width in
-    display_vroomba lbc_board tile_width starting_abs;
+    display_vroomba tile_width starting_abs;
 
     let moves = ref [] in 
     wait_until_q_pressed r curr_coor state lbc_board tile_width
 
   in let poly_list = file_to_polygons input_path 
-  in let room_list = List.map polygon_to_room_2 poly_list |> list_to_array
+
+  in let room_list = List.map polygon_to_room poly_list |> list_to_array
   in Array.iter play room_list
 
 let try_eg_2 () ?file:(file = "basic") =
   let f = BinaryEncodings.find_file "resources/" ^ file ^ ".txt" in 
   render_games_eg2 f ""
+
