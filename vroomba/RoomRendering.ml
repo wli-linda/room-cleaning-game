@@ -65,7 +65,7 @@ let fill_poly_color ?color:(color = Graphics.black) poly_list =
 let print_tuple (x,y) =
     Printf.printf "(%d, %d)\n" x y 
 
-
+(*
 (* Top-level funciton *)
 (* let render_games_eg2 (input_path: string) (output_path : string): unit =  *)
 let render_games_eg2 (input_path: string) (output_path : string) = 
@@ -133,3 +133,4 @@ let try_eg_2 () ?file:(file = "basic") =
   let f = BinaryEncodings.find_file "resources/" ^ file ^ ".txt" in 
   let r = render_games_eg2 f "" in 
   r
+*)

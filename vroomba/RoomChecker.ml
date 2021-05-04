@@ -114,6 +114,12 @@ let string_to_solution (s: string) : move list option =
   with error ->
     None
 
+
+let moves_to_string ls =
+  let buffer = Buffer.create 1 in
+  List.iter (fun m -> Buffer.add_string buffer (pp_move m)) ls;
+  Buffer.contents buffer
+
 let move_in_dir coor dir =
   let (x, y ) = coor in
   match dir with 
@@ -238,9 +244,10 @@ let check_runner input_file solutions_file =
   let num = ref 1 in
   List.iter2 (fun p s ->
       let r = polygon_to_room p in
-      if validate r s
-      then Printf.printf "%d: %d \n" !num (String.length s)
-      else Printf.printf "%d: Fail \n" !num;
+      try (if validate r s
+           then Printf.printf "%d: %d \n" !num (String.length s)
+           else Printf.printf "%d: Fail \n" !num)
+      with Failure _ -> Printf.printf "%d: Fail \n" !num;
       num := !num + 1) polygon_ls solutions_ls
       
 let%test _ = 
@@ -249,6 +256,21 @@ let%test _ =
   validate room "WDDDDDD" 
 
 (* TODO: Add more tests *)
+
+let%test "string_to_solution & moves_to_string 1" =
+  let input  = BinaryEncodings.find_file "../../../resources/basic.sol" in
+  let s = BinaryEncodings.read_file_to_single_string input in
+  let moves = get_exn @@ string_to_solution s in
+  let s' = moves_to_string moves in
+  s = s'
+
+let%test "string_to_solution & moves_to_string 2" =
+  let input  = BinaryEncodings.find_file "../../../resources/rooms.sol" in
+  let ls = BinaryEncodings.read_file_to_strings input in
+  List.for_all (fun s ->
+      let moves = get_exn @@ string_to_solution s in
+      let s' = moves_to_string moves in
+      s = s') ls
 
 let%test "test_checker_simple 1" = 
   let s = "(0, 0); (1, 0); (1, 1); (0, 1)" in
@@ -304,4 +326,7 @@ let%test "test_checker_rooms_negative" =
 
 let%test "test_checker_random_negative" = 
   let room = generate_random_room 100 in
-  not (validate room "W");;
+  not (validate room "W")
+
+let%test "tests are working" =
+  false

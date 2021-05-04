@@ -34,7 +34,7 @@ open RoomRendering
 (*  A placeholder function  *)
 let vroom_vroom _ = 
 	print_endline "Hello, I'm Vroomba, and I can't wait to be implemented!"
-(* 
+
 let () =
   if Array.length (Sys.argv) < 4 
   then begin
@@ -52,8 +52,9 @@ let () =
       (* TODO: Implement exception handling if there is no such file *)
       let input_file = Sys.argv.(2) in
       let output_file = Sys.argv.(3) in
-      try (render_games input_file output_file) (* alt: find path? *)
-      with Failure _ -> error "No such file exists!"
+     (* try (render_games input_file output_file) (* alt: find path? *)
+        with Failure _ -> error "No such file exists!" *)
+      error "impl"
     else begin  
       if command = "generate"
       then
@@ -78,4 +79,4 @@ let () =
         let output_file = Sys.argv.(3) in
         solve_runner input_file output_file
     end
- *)
+
