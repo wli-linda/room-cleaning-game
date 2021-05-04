@@ -27,7 +27,7 @@ open Util
 open Rooms
 open Polygons
 open ArrayUtil
-open RoomUtil 
+open RoomUtil
 (*********************************************)
 (*       Automated generation of rooms       *)
 (*********************************************)
@@ -158,12 +158,12 @@ let take_steps_in_dir coor steps dir =
 (* relocate (0,0) along x or y axis. shift the whole polygon *)
 let relocate_starting_point polygon = 
   let p = polygon_to_int_pairs polygon in
-  let room = polygon_to_room_2 polygon in
-  let tiles = get_all_tiles_no_shift_2 room in
+  let room = polygon_to_room polygon in
+  let tiles = get_all_tiles room in
   let len = List.length tiles in
   let (x,y) = List.nth tiles (Random.int len) in
   let polygon' = List.map (fun (a, b) -> (a - x, b - y)) p in
-  polygon_of_int_pairs polygon'
+  polygon_of_int_pairs polygon' 
 
 let generate_random_room (size : int) : room = 
 
@@ -254,7 +254,7 @@ let generate_random_room (size : int) : room =
   (*Convert corner list to polygon & shift (0,0) to a random but valid starting point *)
     let polygon = polygon_of_int_pairs final_corner_list in
     let polygon' = relocate_starting_point polygon in
-    let room = polygon_to_room_2 polygon' in
+    let room = polygon_to_room polygon' in
 
     room
 
@@ -351,7 +351,7 @@ let valid_room (r: room) : bool =
   in
 
     let space_for_vroomba = 
-      cleanable_no_shift_2 r (0,0)
+      cleanable r (0,0)
   in 
   no_intersect_or_collinear && space_for_vroomba
 end
@@ -359,7 +359,6 @@ end
 (*********************************************)
 (*                     Tests                 *)
 (*********************************************)
-
 
 
 let%test "Generated room is valid" = 
@@ -376,7 +375,7 @@ let%test "test_valid_room_simple" =
   let input  = BinaryEncodings.find_file "../../../resources/basic.txt" in
   let polygon_list = file_to_polygons input in
   List.for_all (fun p -> 
-                    let room = polygon_to_room_2 p in  
+                    let room = polygon_to_room p in  
                     valid_room room) 
   polygon_list
 
@@ -386,7 +385,7 @@ let%test "test_valid_room_simple_negative" =
   let polygon_list = file_to_polygons input in
   List.for_all (fun p -> 
                     (* print_endline "\n\nCHECKING POLYGON\n"; *)
-                    try (let room = polygon_to_room_2 p in  
+                    try (let room = polygon_to_room p in  
                     not (valid_room room))
                     with Failure _ -> true) 
   polygon_list

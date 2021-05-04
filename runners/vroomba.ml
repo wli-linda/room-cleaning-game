@@ -34,7 +34,7 @@ open RoomRendering
 (*  A placeholder function  *)
 let vroom_vroom _ = 
 	print_endline "Hello, I'm Vroomba, and I can't wait to be implemented!"
-
+(* 
 let () =
   if Array.length (Sys.argv) < 4 
   then begin
@@ -78,3 +78,4 @@ let () =
         let output_file = Sys.argv.(3) in
         solve_runner input_file output_file
     end
+ *)
