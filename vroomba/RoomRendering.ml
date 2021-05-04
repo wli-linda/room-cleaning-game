@@ -198,12 +198,12 @@ let render_games (input_path: string) (output_path : string) =
 
       (* print instructions on interface *)
       set_color Graphics.black;
+      moveto 200 740;
+      draw_string "Press 'q' to save your solution and exit the game";
       moveto 200 750;
       draw_string "Press 'n' to save your solution and go to the next room";
       moveto 200 760;
       draw_string "Press 'w', 's', 'a', 'd' to go up, down, left and right";
-      moveto 200 770;
-      draw_string "Press 'q' to save your solution and exit the game";
 
       let state = initiate_state r in 
       let starting_coor = !(state.current) in 
@@ -225,16 +225,12 @@ let render_games (input_path: string) (output_path : string) =
         )
         neighbors;
 
-      if !(state.dirty_tiles) == 0
-      then write_solution_to_file_appendable [] output_path;
-
       wait_until_q_pressed r starting_coor state [] lbc_board tile_width r_arr i
     end
     
   in play room_arr 0
 
-(* testing for ourselves
+(* testing for ourselves *)
 let try_eg_2 input =
   let f = BinaryEncodings.find_file "resources/" ^ input ^ ".txt" in 
   render_games f "resources/test.sol"
-*)
