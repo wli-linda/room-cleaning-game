@@ -52,29 +52,10 @@ type reached = White | Black
 let get_pos_map_index r (x, y) =
   let map = r.map in
   map.(x).(y)
-    
-let inside_room r coor : bool =
-  let (x, y) = coor in
-  if get_pos_map_index r (x, y) = Outer
-  then false
-  else begin
-    (get_pos_map_index r (x + 1, y) != Outer &&
-     get_pos_map_index r (x, y + 1) != Outer &&
-     get_pos_map_index r (x + 1, y + 1) != Outer)
-  end
-  
-let movable_coords r =
-  let ls = ref [] in
-  let map = r.map in
-  let len = Array.length map in
-  for x = 0 to len - 2 do
-    for y = 0 to len - 2 do
-      if inside_room r (x, y)
-      then ls := (map_index_to_coor r (x, y)) :: !ls
-    done
-  done;
-  List.rev !ls
-    
+
+let movable_coords r= 
+  get_all_tiles r
+
 let reachable' state coor neighbor = 
   let (a, b) = coor in 
   let (c, d) = neighbor in
@@ -116,7 +97,7 @@ let init_state r =
       dirty_tiles = ref num } in
   clean state start;
   state
-    
+
 let get_id ct coor = CoorTable.get ct coor
     
 let add_edges g ct coor =
@@ -148,11 +129,6 @@ let create_graph r =
   List.iter (fun coor -> add_edges g ct coor) ls;
   (g, ct, rt)
     
-let moves_to_string ls =
-  let buffer = Buffer.create 1 in
-  List.iter (fun m -> Buffer.add_string buffer (pp_move m)) ls;
-  Buffer.contents buffer
-    
 (* Solve the room and produce the list of moves. *)
 (* Make use of RoomChecker.state state type internally in your solver *)
 let solve_room (r: room) : move list =
@@ -162,17 +138,6 @@ let solve_room (r: room) : move list =
   let moves = ref [] in
   let init_coor = get_exn @@ get_id ct !(state.current) in
   let get_coor g id = get_value @@ get_node g id in
-  
-  let rec check_hygiene ls =
-    match ls with
-    | [] -> None
-    | h :: tl ->
-      let coor = get_coor g h in
-      let is_cleaned = get_exn @@ HygieneTable.get ht coor in
-      if is_cleaned = Dirty
-      then Some h
-      else check_hygiene tl
-  in 
 
   (* TODO: DFS & BACKTRACKING *)
   let rec dfs_visit id =
@@ -194,10 +159,7 @@ let solve_room (r: room) : move list =
             else backtrack ls_moved id_walk
           | h :: tl ->
             let coor = get_coor g h in
-            if (get_exn @@ ReachTable.get rt coor = Black &&
-                (let succ_succ_ls = get_succ g h in
-                 let op = check_hygiene succ_succ_ls in
-                 op = None))
+            if get_exn @@ ReachTable.get rt coor = Black 
             then walk_succ_ls id_walk tl ls_moved 
             else begin
               new_move := true;
@@ -214,7 +176,7 @@ let solve_room (r: room) : move list =
         then List.rev !moves
         else begin
           match ls_moved with
-          | [] -> !moves (* shouldn't reach *)
+          | [] -> List.rev !moves (* shouldn't reach *)
           | h :: tl ->
             let (x, y) = get_coor g id_bk in
             let (coor', rev_move) = match h with
@@ -236,32 +198,41 @@ let solve_runner input_file output_file =
   let polygon_ls = file_to_polygons input_file in
   let res = ref [] in
   List.iter (fun p ->
-      let r = polygon_to_room_2 p in
+      let r = polygon_to_room p in
       let moves = solve_room r in
       let s = moves_to_string moves in
       res := s :: !res) polygon_ls;
   BinaryEncodings.write_strings_to_file output_file (List.rev !res)
-
+        
     
 (*********************************************)
 (*               Testing                     *)
 (*********************************************)
+
+
+let%test "test_reachable'" = 
+  let s = "(0, 0); (1, 0); (1, 1); (2, 1); (2, 2); (0, 2)" in
+  let room = string_to_polygon s |> get_exn |> polygon_to_room in
+  let state = init_state room in
+  reachable' state (0, 0) (0, 1) &&
+  not (reachable' state (0, 0) (1, 1)
+  ) 
     
 let%test "Basic room solver testing 1" =
   let ls = [(0, 0); (6, 0); (6, 1); (8, 1); (8, 2); (6, 2); (6, 3); (0, 3)] in
-  let r = Polygons.polygon_of_int_pairs ls |> polygon_to_room_2 in
+  let r = Polygons.polygon_of_int_pairs ls |> polygon_to_room in
   let moves = solve_room r in
   check_solution r moves
-    (*
+   
 let%test "Basic room solver testing 2" =
   let ls = [(0, 0); (2, 0); (2, 2); (0, 2)] in
-  let r = Polygons.polygon_of_int_pairs ls |> polygon_to_room_2 in
+  let r = Polygons.polygon_of_int_pairs ls |> polygon_to_room in
   let moves = solve_room r in
   check_solution r moves && moves = []
-                            *)        
+                                 
 let%test "Basic room solver testing 3" =
   let ls = [(0, 0); (1, 0); (1, 1); (2, 1); (2, 2); (0, 2)] in
-  let r = Polygons.polygon_of_int_pairs ls |> polygon_to_room_2 in
+  let r = Polygons.polygon_of_int_pairs ls |> polygon_to_room in
   let moves = solve_room r in
   check_solution r moves
     
@@ -269,7 +240,7 @@ let%test "Basic room solver testing with rooms.txt" =
   let input  = BinaryEncodings.find_file "../../../resources/rooms.txt" in
   let polygon_list = file_to_polygons input in
   List.for_all (fun p ->
-      let r = polygon_to_room_2 p in
+      let r = polygon_to_room p in
       let moves = solve_room r in
       check_solution r moves) polygon_list
       
@@ -282,7 +253,10 @@ let%test "Randomised solver testing 2" =
   let r = generate_random_room 30 in
   let moves = solve_room r in
   check_solution r moves
- 
+
+(* larger tests that take time during compiling; 
+ * commenting out for the sake of speed *)
+
 let%test "Randomised solver testing 3" = 
   let r = generate_random_room 100 in
   let moves = solve_room r in
@@ -292,6 +266,15 @@ let%test "Randomised solver testing 4" =
   let input  = BinaryEncodings.find_file "../../../resources/test_generate_l.txt" in
   let polygon_list = file_to_polygons input in
   List.for_all (fun p ->
-      let r = polygon_to_room_2 p in
+      let r = polygon_to_room p in
       let moves = solve_room r in
       check_solution r moves) polygon_list
+
+let%test "Randomised solver testing 4" = 
+  let input  = BinaryEncodings.find_file "../../../resources/large_rooms.txt" in
+  let polygon_list = file_to_polygons input in
+  let len = List.length polygon_list in
+  let p = List.nth polygon_list (Random.int len) in
+  let r = polygon_to_room p in
+  let moves = solve_room r in
+  check_solution r moves

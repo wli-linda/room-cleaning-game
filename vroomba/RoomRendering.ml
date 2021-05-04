@@ -88,8 +88,9 @@ let render_games_eg2 (input_path: string) (output_path : string) =
         |> Array.map (get_abs lbc_board tile_width) in
     fill_poly_color ~color:(Graphics.yellow) room_int_pairs_array_abs;
 
-    (* draw the lattices
-    let all_tiles = get_all_tiles_no_shift_2 r |> list_to_array in
+
+    (* draw the lattices *)
+  let all_tiles = get_all_tiles_no_shift r |> list_to_array in
     set_color Graphics.black;
     for i = 0 to Array.length all_tiles - 1 do
       let (x,y) = all_tiles.(i) in 
@@ -234,9 +235,11 @@ let render_games_eg2 (input_path: string) (output_path : string) =
     wait_until_q_pressed r curr_coor state lbc_board tile_width
 
   in let poly_list = file_to_polygons input_path 
-  in let room_list = List.map polygon_to_room_2 poly_list |> list_to_array
+
+  in let room_list = List.map polygon_to_room poly_list |> list_to_array
   in Array.iter play room_list
 
 let try_eg_2 () ?file:(file = "basic") =
   let f = BinaryEncodings.find_file "resources/" ^ file ^ ".txt" in 
   render_games_eg2 f ""
+
