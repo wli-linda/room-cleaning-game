@@ -96,7 +96,7 @@ let render_games_eg2 (input_path: string) (output_path : string) =
       let (x,y) = all_tiles.(i) in 
       let (final_x, final_y) = get_abs lbc_board tile_width (x,y) in
       draw_rect final_x final_y tile_width tile_width
-    done *)
+    done
 
   (* TODO *)
   in let draw_clean_boundary = ()
