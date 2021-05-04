@@ -134,7 +134,7 @@ let render_games_eg2 (input_path: string) (output_path : string) =
        If the move isn't valid (it's not a tile), 
        there is no display update. Don't record the move. *)
 
-  in let rec wait_until_q_pressed r curr_coor state move_list sol_list lbc_board tile_width =
+  in let rec wait_until_q_pressed r curr_coor state move_list lbc_board tile_width =
 
     let check_room_finished state = ()
     
@@ -145,7 +145,6 @@ let render_games_eg2 (input_path: string) (output_path : string) =
     let event = wait_next_event [Key_pressed] in
     if event.key == 'q' then 
       begin 
-      output_sol_list output_path sol_list;
       close_graph ()
       end
     else
@@ -159,7 +158,7 @@ let render_games_eg2 (input_path: string) (output_path : string) =
       | _ -> error "Unrecognizable move!" 
       in let next_coor = move_in_dir curr_coor m in
       if not (exist_in_room r next_coor) then wait_until_q_pressed r curr_coor 
-         state move_list sol_list lbc_board tile_width
+         state move_list lbc_board tile_width
       else 
         begin
         let next_abs = get_abs_from_coor r lbc_board tile_width next_coor in
@@ -182,12 +181,12 @@ let render_games_eg2 (input_path: string) (output_path : string) =
 
         let move_list' = (m :: move_list) in
         if !(state.dirty_tiles) == 0 then write_solution_to_file (List.rev move_list') output_path
-        else wait_until_q_pressed r next_coor state move_list' sol_list lbc_board tile_width
+        else wait_until_q_pressed r next_coor state move_list' lbc_board tile_width
         end
     end
 
     (* Other keys *)
-    else wait_until_q_pressed r curr_coor state move_list sol_list lbc_board tile_width
+    else wait_until_q_pressed r curr_coor state move_list lbc_board tile_width
 
   in 
 
@@ -210,8 +209,25 @@ let render_games_eg2 (input_path: string) (output_path : string) =
         get_abs lbc_board tile_width in
     display_vroomba tile_width starting_abs;
 
-    let sol_list' = wait_until_q_pressed r starting_coor state [] sol_list lbc_board tile_width
-    in 
+    (* Clean the first tile and its neighboring tiles *)
+    clean_a_tile state starting_coor;
+
+    let neighbors = get_eight_neighbors starting_coor in
+      List.iter (fun n -> 
+              let n_abs = get_abs_from_coor r lbc_board tile_width n in
+              if exist_in_room r n
+              then 
+                (if reachable_2 r starting_coor n
+                then clean_a_tile state n;
+                      draw_clean tile_width n_abs)
+              )
+              neighbors;
+
+    (if !(state.dirty_tiles) == 0 then write_solution_to_file [] output_path
+    else wait_until_q_pressed r starting_coor state [] lbc_board tile_width);
+
+    wait_until_q_pressed r starting_coor state [] lbc_board tile_width
+    
     (* file i/o *)
   in let poly_list = file_to_polygons input_path 
   in let room_list = List.map polygon_to_room poly_list |> list_to_array
