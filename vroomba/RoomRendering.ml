@@ -34,30 +34,17 @@ open GraphicUtil
 open ReadingFiles
 include Polygons
 
-
 (*********************************************)
 (*           Gamifying the solver            *)
 (*********************************************)
-
 (* TODO: Implement more functions! *)
 
-let write_solution_to_file (moves : move list) (path : string) : unit = 
+(* let write_solution_to_file (moves : move list) (path : string) : unit = 
   let buffer = Buffer.create 1 in
   List.iter (fun e -> Buffer.add_string buffer (pp_move e)) moves;
-  ReadingFiles.write_string_to_file path (Buffer.contents buffer)
+  ReadingFiles.write_string_to_file path (Buffer.contents buffer) *)
 
-(* TODO: feel free to modify this function to add more parameters
-   necessary for tracking your game state *)
-let rec wait_until_q_pressed r =
-  let event = wait_next_event [Key_pressed] in
-  if event.key == 'q' then close_graph () else
-  if event.key == 'w' then () else
-  if event.key == 'd' then () else
-  if event.key == 'a' then () else
-  if event.key == 'd' then () else
-      (* TODO: Implement the movement logic *)
-  wait_until_q_pressed ()
-  
+ 
 
 (* Helper functions *)
 
@@ -73,8 +60,12 @@ let print_tuple (x,y) =
 (* let render_games_eg2 (input_path: string) (output_path : string): unit =  *)
 let render_games_eg2 (input_path: string) (output_path : string) = 
 
+  (* ***************************** GRAPHICS *****************************  *)
   let get_abs (ox,oy) t_width (x,y) = 
     ox + t_width * x, oy + t_width * y
+
+  in let get_abs_from_coor r (ox,oy) t_width (x,y) =
+   (x,y) |> coor_to_map_index r |> get_abs (ox, oy) t_width
 
   in let draw_board r =
     let wrapper_dim = (800, 800) in
@@ -112,14 +103,82 @@ let render_games_eg2 (input_path: string) (output_path : string) =
     set_color Graphics.green;
     fill_rect x y tile_width tile_width 
 
+  (* ***************************** GRAPHICS *****************************  *)
+
+  (* ***************************** Move list *****************************  *)
   in let sol_list = ref []
   in let save_moves m_list = 
     String.concat "" (List.rev m_list)
 
   in let output_sol_list output_path sol_list = 
     write_strings_to_file output_path sol_list 
+  (* ***************************** Move list *****************************  *)
+  
+  (* ***************************** Keyboard input **************************  *)
+    (* Ask for user input. If the user requests to go to a tile, update the display 
+       of the Vroomba tile. Clean the neighbouring tiles of the next tile and
+       display them as clean.
 
-  in let move_and_clean room state curr dir = 
+       Record the move. Check whether the room is finished, and if it is,
+       check for the user input to proceed with the next room.
+
+       If the move isn't valid (it's not a tile), 
+       there is no display update. Don't record the move. *)
+
+  in let rec wait_until_q_pressed r curr_coor state lbc_board tile_width =
+
+    let check_room_finished state = ()
+
+    in let check_next_valid curr_coor move = 
+      let curr_index = curr_coor in 
+      let next_coor = move_in_dir curr_coor move in
+      (* if the next position is a tile AND reachable from the current
+        tile, then move Vroomba *)
+      if exist_in_room r next_coor && reachable_2 r curr_coor next_coor then
+      let next_abs = next_coor |> get_abs_from_coor r lbc_board tile_width in 
+      display_vroomba lbc_board tile_width next_abs
+
+    (* Clean the neighbours *)
+    in let clean_the_region coor state =
+      (* Check the eight neighbors *)
+      (* let map_index = coor_to_map_index r coor in *)
+      let neighbors = get_eight_neighbors coor in
+      List.iter (fun n -> 
+                if exist_in_room r n
+                then 
+                  (if reachable_2 r coor n
+                  then clean_a_tile state n)
+                )
+                neighbors;
+      state
+    
+    let workflow = 
+    (* Ask for user input *)
+    in let event = wait_next_event [Key_pressed] in
+    let move = ref Up in 
+    if event.key == 'q' then close_graph () else
+    if event.key == 'w' then move := Up else
+    if event.key == 'd' then move := Right else
+    if event.key == 'a' then move := Left else
+    if event.key == 's' then move := Down else
+    wait_until_q_pressed r curr_coor state lbc_board tile_width
+
+    (* ***************************** Keyboard input **************************  *)
+
+    (* if event.key == 'q' then close_graph () else
+    begin
+    let move = match event.key with 
+      | 'w' -> Up
+      | 'a' -> Left
+      | 's' -> Down
+      | 'd' -> Right
+      | _ -> wait_until_q_pressed r curr_coor state lbc_board tile_width *)
+    
+    
+    (* Clean the neighbouring tiles of the next tile *)
+  
+  
+  (* in let move_and_clean room state curr dir = 
   (*clean neighbors*)
   let clean_the_region curr =
       (* Check the eight neighbors *)
@@ -138,7 +197,7 @@ let render_games_eg2 (input_path: string) (output_path : string) =
     (* clean the next point *)
     clean_a_tile state coor;
     clean_the_region coor;
-    !(state.dirty_tiles) = 0
+    !(state.dirty_tiles) = 0 *)
 
   in let play r = 
     (* Initialize board and room rendering. 
@@ -148,29 +207,18 @@ let render_games_eg2 (input_path: string) (output_path : string) =
     draw_room r lbc_board tile_width;
     
     let state = initiate_state r in 
-    let starting_coor = !(state.current) |> coor_to_map_index r |>
+    let starting_coor = !(state.current) in 
+    let starting_abs = starting_coor  |> coor_to_map_index r |>
         get_abs lbc_board tile_width in
-    display_vroomba lbc_board tile_width starting_coor;
-
-    (* Ask for user input. If the move is valid, update the display 
-       of the Vroomba tile and neighbouring tiles that have been cleaned. 
-       Record the move. Check whether the room is finished, and if it is,
-       check for the user input to proceed with the next room.
-
-       If the move isn't valid, there is no display update. Don't record 
-       the move. *)
-
-    (*  *)
+    display_vroomba lbc_board tile_width starting_abs;
 
     let moves = ref [] in 
-    wait_until_q_pressed ()
+    wait_until_q_pressed r curr_coor state lbc_board tile_width
 
   in let poly_list = file_to_polygons input_path 
   in let room_list = List.map polygon_to_room_2 poly_list |> list_to_array
-  in Array.iter play room_list;
-  room_list.(1)
+  in Array.iter play room_list
 
 let try_eg_2 () ?file:(file = "basic") =
   let f = BinaryEncodings.find_file "resources/" ^ file ^ ".txt" in 
-  let r = render_games_eg2 f "" in 
-  r
+  render_games_eg2 f ""
