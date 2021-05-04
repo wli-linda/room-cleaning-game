@@ -30,7 +30,6 @@ open ArrayUtil
 open Rooms
 open RoomChecker
 open RoomGenerator
-open RoomSolver
 open RoomUtil
 open GraphicUtil
 open ReadingFiles
@@ -41,10 +40,10 @@ include Polygons
 (*********************************************)
 (* TODO: Implement more functions! *)
 
-(* let write_solution_to_file (moves : move list) (path : string) : unit = 
+let write_solution_to_file (moves : move list) (path : string) : unit = 
   let buffer = Buffer.create 1 in
   List.iter (fun e -> Buffer.add_string buffer (pp_move e)) moves;
-  ReadingFiles.write_string_to_file path (Buffer.contents buffer) *)
+  ReadingFiles.write_string_to_file path (Buffer.contents buffer)
 
  
 
@@ -114,12 +113,12 @@ let render_games_eg2 (input_path: string) (output_path : string) =
   (* ***************************** GRAPHICS *****************************  *)
 
   (* ***************************** Move list *****************************  *)
-  in let sol_list = ref []
+  (* in let sol_list = ref []
   in let save_moves m_list = 
     String.concat "" (List.rev m_list)
 
   in let output_sol_list output_path sol_list = 
-    write_strings_to_file output_path sol_list 
+    write_strings_to_file output_path sol_list  *)
   (* ***************************** Move list *****************************  *)
   
   (* ***************************** Keyboard input **************************  *)
@@ -162,6 +161,7 @@ let render_games_eg2 (input_path: string) (output_path : string) =
       if not (exist_in_room r next_coor) then wait_until_q_pressed r curr_coor 
          state move_list sol_list lbc_board tile_width
       else 
+        begin
         let next_abs = get_abs_from_coor r lbc_board tile_width next_coor in
         (* Update the current position of the state *)
         state.current := next_coor;
@@ -180,13 +180,13 @@ let render_games_eg2 (input_path: string) (output_path : string) =
                 )
                 neighbors;
 
-        let move_list' = ((String.make 1 event.key) :: move_list) in
-        if !(state.dirty_tiles) == 0 then move_list'
+        let move_list' = (m :: move_list) in
+        if !(state.dirty_tiles) == 0 then write_solution_to_file (List.rev move_list') output_path
         else wait_until_q_pressed r next_coor state move_list' sol_list lbc_board tile_width
-
-
+        end
     end
 
+    (* Other keys *)
     else wait_until_q_pressed r curr_coor state move_list sol_list lbc_board tile_width
 
   in 
@@ -210,11 +210,10 @@ let render_games_eg2 (input_path: string) (output_path : string) =
         get_abs lbc_board tile_width in
     display_vroomba tile_width starting_abs;
 
-    let moves = ref [] in 
-    wait_until_q_pressed r curr_coor state lbc_board tile_width
-
+    let sol_list' = wait_until_q_pressed r starting_coor state [] sol_list lbc_board tile_width
+    in 
+    (* file i/o *)
   in let poly_list = file_to_polygons input_path 
-
   in let room_list = List.map polygon_to_room poly_list |> list_to_array
   in Array.iter play room_list
 
