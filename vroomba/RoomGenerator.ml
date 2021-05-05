@@ -36,12 +36,16 @@ open RoomUtil
 (*  Example generate_random_room 4 should return a room that fits into a
     4x4 square. *)
 
-(*RUI: The idea is to generate a valid polygon, 
-and use polygon_to_room to convert it to room. We can break the room into
-4 quadrants. In each quadrant we plot the room 's boundaries by moving a point in three directions .
-If the move's direction is diff from the previous one, record the turning point
-Finally, we shift the room so that (0,0) falls on a random point in the room.
-Restrictions on the point's movement are set so as to prevent edge crossing.
+(* RUI: The idea is to generate a valid polygon, 
+ * and use polygon_to_room to convert it to room. We can break the room into
+ * 4 quadrants. In each quadrant we plot the room 's boundaries by moving a 
+ * point in three directions.
+   
+ * If the move's direction is diff from the previous one, record the 
+ * turning point
+ * Finally, we shift the room so that (0,0) falls on a random point in 
+ * the room. Restrictions on the point's movement are set so as to 
+ * prevent edges from crossing.
 
 FIRST QUADRANT (Top Left):
 - Start at the left-most point of the empty space, on x-axis
@@ -69,11 +73,11 @@ Fourth QUADRANT (Bottom Left):
 - Until reaching the negative x-axis
 - If last point = initial point -> do not add last point to corner list
 
-Some limitations on moving directions & steps in each quadrant
-- The maximum number of steps allowed to take in a direction is limited by the boundary 
-- If the previous move is Up, the next can't be Down, etc. Basically, can't "cancel" the previous move
-*)
-
+ * Some limitations on moving directions & steps in each quadrant
+ * - The maximum number of steps allowed to take in a direction is 
+ *   limited by the boundary 
+ * - If the previous move is Up, the next can't be Down, etc. 
+ *   Basically, can't "cancel" the previous move *)
 
 type quadrant =
   | First
@@ -83,9 +87,8 @@ type quadrant =
 
 let four_quadrants = [|First; Second; Third; Fourth|]
 
-(* 
-Given a quadrant and the room size (side length),
-return boundaries of movements*)
+(* Given a quadrant and the room size (side length),
+ * return boundaries of movements *)
 let get_boundaries quad size = 
   let half = size / 2 in
   let half' = size - half in
@@ -94,7 +97,6 @@ let get_boundaries quad size =
   | Second -> (half, 0, 1, half')
   | Third -> (-1, -half', 0, half')
   | Fourth -> (0, -half', -half, -1)
-
 
 (* Given a coordinate and the quadrant, return if should stop *)
 let should_stop coor quad = 
@@ -122,7 +124,7 @@ let get_first_direction quad =
   | Fourth -> Left
 
 (* Given a coordinate and the boundaries, return allowed
-moves in all four directions *)
+ * moves in all four directions *)
 let get_allowed_moves coor boundaries = 
     let (x, y ) = coor in
     let (up_bound, low_bound, left_bound, right_bound) = boundaries in
@@ -131,11 +133,10 @@ let get_allowed_moves coor boundaries =
     and left_move = abs (left_bound - x)
     and right_move = abs (right_bound - x)
     in 
-    (* Printf.printf "up: %d down: %d left: %d right: %d\n" up_move down_move left_move right_move; *)
     [|up_move; down_move; left_move ; right_move|] 
 
 (* given an array of maximum movements in all directions and a direction, 
-return the maximum no. of steps can take in that direction*)
+ * return the maximum no. of steps can take in that direction*)
 let get_max_steps_in_direction allowed_moves dir = 
   match dir with
   | Up -> allowed_moves.(0)
@@ -144,8 +145,8 @@ let get_max_steps_in_direction allowed_moves dir =
   | Right -> allowed_moves.(3)
   | _ -> error "Invalid direction."
 
-(*given a coordinate, the direction, and the number of steps,
-return the final position of the coordinates *)
+(* given a coordinate, the direction, and the number of steps,
+ * return the final position of the coordinates *)
 let take_steps_in_dir coor steps dir =
   let (x, y ) = coor in
   match dir with 
@@ -161,19 +162,20 @@ let relocate_starting_point polygon =
   let room = polygon_to_room polygon in
   let tiles = get_all_tiles room in
   let len = List.length tiles in
-  let (x,y) = List.nth tiles (Random.int len) in
+  let (x, y) = List.nth tiles (Random.int len) in
   let polygon' = List.map (fun (a, b) -> (a - x, b - y)) p in
   polygon_of_int_pairs polygon' 
 
 let generate_random_room (size : int) : room = 
 
-  (*move in quadrant, return final position, last direction taken and the corner list*)
+  (* move in quadrant, return final position, last 
+   * direction taken and the corner list*)
 
   let move_in_quadrant init_coor prev_dir quad corner_list = 
     let boundaries = get_boundaries quad size in 
 
     (* Since making the first move & following moves share similar procedures,
-    encode them in this generic move function  *)
+     * encode them in this generic move function  *)
     let generic_move allowed_directions random coor prev_dir corner_list =
 
       let allowed_moves = get_allowed_moves coor boundaries in 
@@ -184,7 +186,7 @@ let generate_random_room (size : int) : room =
       let new_coor = take_steps_in_dir coor steps dir in
 
       (* if the current direction is different from prev_dir, the point has 
-      taken a turn. We record the previous point in the corner list *)    
+       * taken a turn. We record the previous point in the corner list *)    
       let new_corner_list = 
           if (dir != prev_dir) && steps > 0
           then coor :: corner_list
@@ -251,7 +253,8 @@ let generate_random_room (size : int) : room =
     then corner_list
     else final_coor :: corner_list
   in 
-  (*Convert corner list to polygon & shift (0,0) to a random but valid starting point *)
+  (* Convert corner list to polygon & shift (0, 0) to a 
+   * random but valid starting point *)
     let polygon = polygon_of_int_pairs final_corner_list in
     let polygon' = relocate_starting_point polygon in
     let room = polygon_to_room polygon' in
@@ -262,28 +265,30 @@ let generate_random_room (size : int) : room =
 (* Define what it means to the room to be valid (e.g., no lacunas,
    obstacles, there is a place for initial Vroomba position, etc). *)
 
-(*RUI: A few checks:
+(* RUI: A few checks:
 
-1. No lacunas: 
-  In our implementation, drawing a lacuna will end up with edges extending out from 
-  existing edges that not adjacent to it. So here we just need to check if edge intersect
-  with another edge that is not adjacent to it
-2. No obstacles : O(n^2)
-  Same as above
+ * 1. No lacunas: 
+ * In our implementation, drawing a lacuna will end up 
+ * with edges extending out from existing edges that not 
+ * adjacent to it. So here we just need to check if edge intersect
+ * with another edge that is not adjacent to it
 
-3. Initial place for Vroomba: O(1)
-  (0,0) must be cleanable (aka. is a tile)
+ * 2. No obstacles : O(n^2)
+ * Same as above
 
-4. No diagonal edges: 
-  Consecutive edges only run horiontally or vertically
-  only change in x or y coordinate
-  *this will throw error in polygon_to_room
+ * 3. Initial place for Vroomba: O(1)
+ * (0,0) must be cleanable (aka. is a tile)
 
-5. No collinear edges:
-  Check for non-collinearity while checking #1
+ * 4. No diagonal edges: 
+ * Consecutive edges only run horiontally or vertically
+ * only change in x or y coordinate
+ * this will throw error in polygon_to_room
 
-6. No "8" shaped rooms:
-  same checks as #1
+ * 5. No collinear edges:
+ * Check for non-collinearity while checking #1
+
+ * 6. No "8" shaped rooms:
+ * Same checks as #1
    
 *)
 
@@ -296,73 +301,63 @@ let valid_room (r: room) : bool =
 
   (* A room cannot have less than 4 edges *)
   if len <= 3 then false 
-  else
-
-  begin
-
-  (*get edge list in (Point * Point) pairs *)
-  let edge_list = Polygons.edges polygon in
-  let edge_arr = list_to_array edge_list in
-
-  let no_intersect_or_collinear = 
-    let res = ref true in 
-
-    let i = ref 0 in 
-    while !res && !i < len - 1 do
-      let s1 = edge_arr.(!i) in 
-
-      (* s1 vs all segments behind it excluding the next neighbor *)
-      begin
-      for j = !i+2 to len - 1 do
-        (* avoid index out of bounds *)
-        if j <= len - 1 then
-        begin
-        (* skip first and last segment comparison *)
-        if !i = 0 && j = len -1 then () 
-          else
-            (let s2 = edge_arr.(j) in
-            if (segments_intersect s1 s2) ||
-                (intersect_as_collinear s1 s2)
-            then res := false 
-            else ())  
-        end
-      done
-      end;
-
-      (* s1 vs all segments before it excluding the previous neighbor *)
-      begin
-      for j = !i-2 downto 0 do
-        (* avoid index out of bounds *)
-        if j >= 0 then
-        begin
-        (* skip first and last segment comparison *)
-        if !i = len -1 && j = 0 then () 
-        else
-          (let s2 = edge_arr.(j) in
-          if (segments_intersect s1 s2) ||
-              (intersect_as_collinear s1 s2)
-          then res := false)
-        end
-        done
-      end;
-      i := !i + 1
-    done;
-    !res
-  in
-
-    let space_for_vroomba = 
-      cleanable r (0,0)
-  in 
-  no_intersect_or_collinear && space_for_vroomba
-end
-
+  else begin
+    
+    (*get edge list in (Point * Point) pairs *)
+    let edge_list = Polygons.edges polygon in
+    let edge_arr = list_to_array edge_list in
+    
+    let no_intersect_or_collinear = 
+      let res = ref true in 
+      let i = ref 0 in 
+      while !res && !i < len - 1 do
+        let s1 = edge_arr.(!i) in 
+        (* s1 vs all segments behind it excluding the next neighbor *)
+        for j = !i+2 to len - 1 do
+          (* avoid index out of bounds *)
+          if j <= len - 1
+          then begin
+            (* skip first and last segment comparison *)
+            if !i = 0 && j = len -1 then () 
+            else
+              (let s2 = edge_arr.(j) in
+               if (segments_intersect s1 s2) ||
+                  (intersect_as_collinear s1 s2)
+               then res := false 
+               else ())  
+          end
+        done;
+        
+        (* s1 vs all segments before it excluding the previous neighbor *)
+        for j = !i-2 downto 0 do
+          (* avoid index out of bounds *)
+          if j >= 0 then
+            begin
+              (* skip first and last segment comparison *)
+              if !i = len -1 && j = 0 then () 
+              else
+                (let s2 = edge_arr.(j) in
+                 if (segments_intersect s1 s2) ||
+                    (intersect_as_collinear s1 s2)
+                 then res := false)
+            end
+        done;
+        i := !i + 1
+      done;
+      !res
+    in
+    
+    let space_for_vroomba = cleanable r (0,0) in 
+    no_intersect_or_collinear && space_for_vroomba
+  end
+  
+  
 (*********************************************)
 (*                     Tests                 *)
 (*********************************************)
 
 
 let%test "Generated room is valid" = 
-
   for _ = 0 to 20 do
     let size = 2 + Random.int 49 in
     let r = generate_random_room size in
@@ -370,7 +365,6 @@ let%test "Generated room is valid" =
   done;
   true
 
-(* TODO: add more tests *)
 let%test "test_valid_room_simple" = 
   let input  = BinaryEncodings.find_file "../../../resources/basic.txt" in
   let polygon_list = file_to_polygons input in
@@ -378,7 +372,6 @@ let%test "test_valid_room_simple" =
                     let room = polygon_to_room p in  
                     valid_room room) 
   polygon_list
-
 
 let%test "test_valid_room_simple_negative" = 
   let input  = BinaryEncodings.find_file "../../../resources/invalid.txt" in

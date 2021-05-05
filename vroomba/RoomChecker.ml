@@ -67,9 +67,8 @@ type state = {
  dirty_tiles : int ref
 }
 
-(* A quicker way to check if a coor is a tile, given the state *)
-let is_a_tile state coor = 
-  HygieneTable.get state.table coor != None
+(* A quick way to check if a coor is a tile, given the state; ~O(1) *)
+let is_a_tile state coor = HygieneTable.get state.table coor != None
 
 let initiate_state room =
   let num = get_tiles_num room in
@@ -125,23 +124,20 @@ let move_in_dir coor dir =
   | Right -> (x + 1 , y)
 
 (* RUI: 
-When cleaning a tile:
-Mark the hygeine status as Clean only if the tile is Dirty
-
-1. At current location, check the coordinates:
-  - If does not exist in room -> fail game
-  - If exists:
-    - The tile is not cleanable: fail game
-    - The tile is cleanable: change hygeine state to Clean in hashtable & dirty_tiles -1
-2. Check the 8 neighbouring coordinates:
-  - If any coordinate does not exist in room -> ignore
-  - For those that are in room:
-    - If not cleanable: ignore
-    - If cleanable & reacheable: clean
-3. Move the current point
-
- *)
-
+ * When cleaning a tile:
+ * Mark the hygeine status as Clean & change dirty_tiles if the tile is Dirty
+ * 
+ * 1. At current location, check the coordinates:
+ * - If does not exist in room -> fail game
+ * - If exists, change hygeine state to Clean in hashtable & dirty_tiles - 1
+ * 
+ * 2. Check the 8 neighbouring coordinates:
+ * - If any coordinate does not exist in room -> ignore
+ * - For those that are in room:
+ *   - If not reachable: ignore
+ *   - If reacheable: clean
+ *
+ * 3. Move the current point in the state *)
 
 let clean_a_tile state coor = 
   let ht = state.table in 
@@ -151,81 +147,41 @@ let clean_a_tile state coor =
   state.dirty_tiles := !(state.dirty_tiles) - 1;
   HygieneTable.insert ht coor Clean
 
-(*given current point & state & move, 
-return true if all tiles in the room have been cleaned.
-*)
-let move_and_clean room state curr dir = 
-  (*clean neighbors*)
-  let clean_the_region curr =
-      (* Check the eight neighbors *)
-      let neighbors = get_eight_neighbors curr in
-      List.iter (fun coor -> 
-                if exist_in_room room coor
-                then 
-                  (if reachable room curr coor
-                  then clean_a_tile state coor)
-                )
-                neighbors
-  in
-    (*move current point in dir*)
-    let coor = move_in_dir curr dir in 
-    
-    (* clean the next point *)
-    clean_a_tile state coor;
-    clean_the_region coor;
-    !(state.dirty_tiles) = 0
-
-
-
-
-
-
 (*  Check that the sequence of moves is valid  *)
 let check_solution (r: room) (moves: move list) : bool = 
   let move_list = ref moves in
   let remaining = ref ((List.length moves) + 1) in
-  let state = initiate_state r in 
-  let success = ref true in
-  while (!success && !remaining > 0) do
-    begin
-  
-    (* Check current point *)
-    let curr = !(state.current) in
-(*     let (x, y) = curr in 
-    Printf.printf "currently at %d %d\n" x y; *)
-    begin
-    if not (exist_in_room r curr)
-    then success := false
-    else 
-      (if not (cleanable r curr)
-      then ((* print_endline "not cleanable";  *)success := false)
-      else clean_a_tile state curr
-      ) 
-    end ;
-
-    (* Check the eight neighbors *)
-    let neighbors = get_eight_neighbors curr in
-    List.iter (fun coor -> 
-              if exist_in_room r coor
-              then 
-                (if reachable r curr coor
-                then clean_a_tile state coor)
-              )
-              neighbors;
-
-    (* move Vroomba and update move_list  *)
-    remaining := !remaining - 1;
-    if !remaining > 0
-    then
-      (let dir = List.hd !move_list in
-      state.current := move_in_dir curr dir;
-      move_list := List.tl !move_list;
-      )
-    end
-  done;
-  if !(state.dirty_tiles) > 0 
+  let state = initiate_state r in
+  if !remaining * 9 < !(state.dirty_tiles)
   then false
-  else !success 
+  else begin
+    let success = ref true in
+    while (!success && !remaining > 0) do
+      (* Check current point *)
+      let curr = !(state.current) in
+      if not (is_a_tile state curr)
+      then success := false
+      else clean_a_tile state curr;
+
+      (* Check the eight neighbors *)
+      let neighbors = get_eight_neighbors curr in
+      List.iter (fun coor -> 
+          if is_a_tile state coor
+          then (if reachable r curr coor
+                then clean_a_tile state coor)
+        ) neighbors;
+
+      (* move Vroomba and update move_list  *)
+      remaining := !remaining - 1;
+      if !remaining > 0
+      then (let dir = List.hd !move_list in
+            state.current := move_in_dir curr dir;
+            move_list := List.tl !move_list)
+    done;
+    if !(state.dirty_tiles) > 0 
+    then false
+    else !success
+  end
 
 
 (*  Top-level validator  *)
@@ -234,17 +190,35 @@ let validate r s =
   | None -> false
   | Some moves -> check_solution r moves 
 
+(* Function for runner *)
 let check_runner input_file solutions_file =
   let polygon_ls = file_to_polygons input_file in
   let solutions_ls = BinaryEncodings.read_file_to_strings solutions_file in
-  let num = ref 1 in
-  List.iter2 (fun p s ->
-      let r = polygon_to_room p in
-      if validate r s
-      then Printf.printf "%d: %d \n" !num (String.length s)
-      else Printf.printf "%d: Fail \n" !num;
-      num := !num + 1) polygon_ls solutions_ls
+  (* catch error: not enough solutions for # of rooms, or vice versa *)
+  let p_len = List.length polygon_ls in
+  let s_len = List.length solutions_ls in
+  if p_len < s_len
+  then Printf.printf
+      "More solutions than rooms! Are you sure you have the right files?"
+  else begin
+    let solutions_ls' =
+      if s_len < p_len
+      then (let added = List.init (p_len - s_len) (fun n -> "") in
+            List.append solutions_ls added)
+      else solutions_ls in
 
+    (* validate each solution *)
+    let num = ref 1 in
+    List.iter2 (fun p s ->
+        let r = polygon_to_room p in
+        if validate r s
+        then Printf.printf "%d: %d \n" !num (String.length s)
+        else Printf.printf "%d: Fail \n" !num;
+        num := !num + 1) polygon_ls solutions_ls'
+  end
+
+
+(* Tests *)
   
 let%test "test_initial_state" =
   let input  = BinaryEncodings.find_file "../../../resources/basic.txt" in

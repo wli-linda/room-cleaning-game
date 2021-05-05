@@ -48,7 +48,11 @@ type reached = White | Black
    and data types you consider necessary, and also rely on data
    structures and algorithms from the lectures (see folder `lib` of
    this project). *)
-    
+
+(*********************************************)
+(*     Util functions to construct graph     *)
+(*********************************************)
+
 let get_pos_map_index r (x, y) =
   let map = r.map in
   map.(x).(y)
@@ -128,18 +132,21 @@ let create_graph r =
       add_node g coor) ls;
   List.iter (fun coor -> add_edges g ct coor) ls;
   (g, ct, rt)
-    
+
+(*********************************************)
+(*              Actual solver                *)
+(*********************************************)
+
 (* Solve the room and produce the list of moves. *)
 (* Make use of RoomChecker.state state type internally in your solver *)
 let solve_room (r: room) : move list =
   let (g, ct, rt) = create_graph r in
   let state = init_state r in
-  let ht = state.table in
   let moves = ref [] in
   let init_coor = get_exn @@ get_id ct !(state.current) in
   let get_coor g id = get_value @@ get_node g id in
 
-  (* TODO: DFS & BACKTRACKING *)
+  (* DFS & BACKTRACKING *)
   let rec dfs_visit id =
     clean state (get_coor g id);
     ReachTable.insert rt (get_coor g id) Black;
@@ -257,6 +264,7 @@ let%test "Randomised solver testing 2" =
 (* larger tests that take time during compiling; 
  * commenting out for the sake of speed *)
 
+(*
 let%test "Randomised solver testing 3" = 
   let r = generate_random_room 100 in
   let moves = solve_room r in
@@ -278,3 +286,4 @@ let%test "Randomised solver testing 4" =
   let r = polygon_to_room p in
   let moves = solve_room r in
   check_solution r moves
+*)

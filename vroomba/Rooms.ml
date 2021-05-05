@@ -54,27 +54,11 @@ let mk_room size =
     shift = ref (0, 0)
   }
 
-(* let string_to_polygon_2 (s : string) : polygon option =
-  let extract_number string =
-
-  in  
-  let res = ref [] in
-  let coords = String.split_on_char ';' s in
-  try (
-    List.map (fun e -> String.split_on_char ',' e) coords |>
-    List.iter (fun ls ->
-        if List.length ls = 2
-        then begin
-          let x = extract_number @@ List.hd ls in
-          let y = extract_number @@ List.nth ls 1 in
-          res := (x, y) :: !res
-        end
-        else error "Ill-formed string!");
-    Some (polygon_of_int_pairs (List.rev !res)))
-  with error -> None *)
-
 (*  Read a polygon from a string of coordinates as in resources/basic.txt  *)
 (*  A string can be ill-formed! *)
+
+(* This function is flexible with diff formats, but may have difficulty 
+ * catching some ill-formed strings, e.g. "(8-8, 0)" *)
 let string_to_polygon (s : string) : polygon option =
   let extract_number string =
     let len = String.length string in
@@ -197,19 +181,20 @@ let fill_room room map edges =
   let pol = polygon_of_int_pairs edges in 
   for i = 0 to len - 1 do
     for j = 0 to len - 1 do
-      if map.(i).(j) <> Edge then
-      begin
-
+      if map.(i).(j) <> Edge
+      then begin
       (* test if the center is inside the polygon *)
-      if point_within_polygon_2 pol (map_index_to_coor room (i,j)
+      if point_within_polygon_2 pol (map_index_to_coor room (i, j)
       |> coor_to_point |> get_center)
       then map.(i).(j) <- Inner
       end
     done 
   done
 
-(*  Convert a polygon to a room data type  *)
+(* **************** ZITING'S ADDITION **************** *)
+(* **************** Till here **************** *)
 
+(*  Convert a polygon to a room data type  *)
 let polygon_to_room (p: polygon) : room =
   (* get information about the polygon *)
   let pos_x = ref 0 in
@@ -246,9 +231,6 @@ let polygon_to_room (p: polygon) : room =
   else fill_edges r.map !(r.edges);
   fill_room r r.map !(r.edges);
   r
-
-(* **************** ZITING'S ADDITION **************** *)
-(* **************** Till here **************** *)
 
 (*  Convert a room to a list of polygon coordinates  *)
 let room_to_polygon (r: room) : polygon = 
