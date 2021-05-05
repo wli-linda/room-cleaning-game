@@ -123,7 +123,7 @@ in let clean_and_draw r state coor lbc_board tile_width =
                     draw_clean tile_width n_abs))
          ) neighbors;
 
-  in let print_instructions () =
+  in let print_instructions cleaned_num room_num =
        set_color Graphics.black;
        moveto 200 750;
        draw_string "Move the green Vroomba to clean the room! Cleaned tiles are blue.";
@@ -132,8 +132,24 @@ in let clean_and_draw r state coor lbc_board tile_width =
        moveto 150 70;
        draw_string "When the current room is fully clean, you will automatically proceed to the next room";
        moveto 200 50;
-       draw_string "Press 'Q' to save solutions and exit the game at any point"     
+       draw_string "Press 'Q' to save solutions and exit the game at any point";     
+       moveto 620 730;
+       let str = Printf.sprintf "Rooms Cleaned: %d / %d" cleaned_num room_num in
+       draw_string str
   
+  in let finish _ = 
+      open_graph " 800x800";
+       set_color Graphics.black;
+       moveto 300 400;
+       draw_string "You have cleaned all the rooms. Well done!";
+       moveto 300 370;
+       draw_string "Press 'Q' to exit.";
+      let event = wait_next_event [Key_pressed] in
+      if event.key == 'q'
+      then close_graph ()
+
+
+
   (* ***************************** GRAPHICS *****************************  *)
 
 
@@ -216,7 +232,7 @@ in let clean_and_draw r state coor lbc_board tile_width =
       draw_room r lbc_board tile_width;
 
       (* print instructions on interface *)
-      print_instructions ();
+      print_instructions (i) (Array.length p_arr);
 
       let state = initiate_state r in 
       let starting_coor = !(state.current) in
@@ -226,6 +242,8 @@ in let clean_and_draw r state coor lbc_board tile_width =
 
       wait_until_q_pressed r state [] lbc_board tile_width p_arr i
     end
+
+    else finish ()
     
   in play poly_arr 0
 
