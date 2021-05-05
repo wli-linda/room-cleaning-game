@@ -129,13 +129,9 @@ in let clean_and_draw r state coor lbc_board tile_width =
        draw_string "Move the green Vroomba to clean the room! Cleaned tiles are blue.";
        moveto 200 730;
        draw_string "Press 'W', 'S', 'A', 'D' to go up, down, left and right";
-       moveto 200 70;
-       draw_string "Press 'N' to check if the room is completely cleaned:";
-       moveto 200 60;
-       draw_string "If it is, you will go to the next room - this might take a few seconds";
+       moveto 150 70;
+       draw_string "When the current room is fully clean, you will automatically proceed to the next room";
        moveto 200 50;
-       draw_string "If not, continue moving your Vroomba to clean!";
-       moveto 200 25;
        draw_string "Press 'Q' to save solutions and exit the game at any point"     
   
   (* ***************************** GRAPHICS *****************************  *)
@@ -155,56 +151,53 @@ in let clean_and_draw r state coor lbc_board tile_width =
      there is no display update. Don't record the move. *)
 
   in let rec wait_until_q_pressed r state move_list lbc_board tile_width p_arr i =
-       
-       (* Ask for user input *)
 
-       let curr_coor = !(state.current) in
-       
-       let event = wait_next_event [Key_pressed] in
-       if event.key == 'q'
-       then (write_solution_to_file_appendable (List.rev move_list) output_path;
-             close_graph ())
-       else if event.key == 'n'
-       then begin
-         if !(state.dirty_tiles) = 0
-         then (write_solution_to_file_appendable
-                 (List.rev move_list) output_path;
-               close_graph ();
-               play p_arr (i + 1))
+       if !(state.dirty_tiles) = 0
+       then (write_solution_to_file_appendable
+               (List.rev move_list) output_path;
+             close_graph ();
+             play p_arr (i + 1))
+       else begin
+
+         (* Ask for user input *)
+         let curr_coor = !(state.current) in
+
+         let event = wait_next_event [Key_pressed] in
+         if event.key == 'q'
+         then (write_solution_to_file_appendable (List.rev move_list) output_path;
+               close_graph ())
+         else if List.mem event.key ['a'; 's'; 'd'; 'w']
+         then begin
+           let m = match event.key with 
+             | 'w' -> RoomChecker.Up
+             | 'a' -> Left
+             | 's' -> Down
+             | 'd' -> Right
+             | _ -> error "Unrecognizable move!" 
+           in let next_coor = move_in_dir curr_coor m in
+           if not (is_a_tile state next_coor)
+           then wait_until_q_pressed r state
+               move_list lbc_board tile_width p_arr i
+           else begin
+             (* Update the current position of the state *)
+             state.current := next_coor;
+
+             (* Clean the tile and the neighbouring tiles 
+              * Then reflect the cleaning on the renderng *)
+             clean_and_draw r state next_coor lbc_board tile_width;
+
+             let move_list' = (m :: move_list) in
+             wait_until_q_pressed r state
+               move_list' lbc_board tile_width p_arr i
+
+           end
+         end
+
+         (* Other keys *)
          else wait_until_q_pressed r state
              move_list lbc_board tile_width p_arr i
        end
-       else if List.mem event.key ['a'; 's'; 'd'; 'w']
-       then begin
-         let m = match event.key with 
-           | 'w' -> RoomChecker.Up
-           | 'a' -> Left
-           | 's' -> Down
-           | 'd' -> Right
-           | _ -> error "Unrecognizable move!" 
-         in let next_coor = move_in_dir curr_coor m in
-         if not (is_a_tile state next_coor)
-         then wait_until_q_pressed r state
-             move_list lbc_board tile_width p_arr i
-         else begin
-           (* Update the current position of the state *)
-           state.current := next_coor;
-           
-           (* Clean the tile and the neighbouring tiles 
-            * Then reflect the cleaning on the renderng *)
-           clean_and_draw r state next_coor lbc_board tile_width;
-           
-           let move_list' = (m :: move_list) in
-           wait_until_q_pressed r state
-             move_list' lbc_board tile_width p_arr i
-             
-          end
-       end
 
-       (* Other keys *)
-       else wait_until_q_pressed r state
-           move_list lbc_board tile_width p_arr i
-           
 
 
   (* ***************************** Keyboard input **************************  *)
