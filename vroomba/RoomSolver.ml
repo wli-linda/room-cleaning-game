@@ -263,14 +263,17 @@ let%test "Basic room solver testing 3" =
   let r = Polygons.polygon_of_int_pairs ls |> polygon_to_room in
   let moves = solve_room r in
   check_solution r moves
-    
+
+(* Commenting this test out as well to save compiling time since
+ * prof will test this anyways *)
+(*
 let%test "Basic room solver testing with rooms.txt" =
   let input  = BinaryEncodings.find_file "../../../resources/rooms.txt" in
   let polygon_list = file_to_polygons input in
   List.for_all (fun p ->
       let r = polygon_to_room p in
       let moves = solve_room r in
-      check_solution r moves) polygon_list
+      check_solution r moves) polygon_list *)
       
 let%test "Randomised solver testing 1" = 
   let r = generate_random_room 10 in
@@ -283,8 +286,7 @@ let%test "Randomised solver testing 2" =
   check_solution r moves
 
 (* larger tests that take time during compiling; 
- * commenting out for the sake of speed *)
-
+ * commenting out for the sake of compiling speed *)
 (*
 let%test "Randomised solver testing 3" = 
   let r = generate_random_room 100 in
@@ -299,6 +301,7 @@ let%test "Randomised solver testing 4" =
       let moves = solve_room r in
       check_solution r moves) polygon_list
 
+(* also this takes foreverrrr don't actually do it *)
 let%test "Randomised solver testing 4" = 
   let input  = BinaryEncodings.find_file "../../../resources/large_rooms.txt" in
   let polygon_list = file_to_polygons input in

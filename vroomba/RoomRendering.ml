@@ -69,10 +69,13 @@ let render_games (input_path: string) (output_path : string) =
 
   ReadingFiles.write_string_to_file output_path "";
   
-  (* a bit costly to do this at first instead of at each room *)
+  (* a bit costly to render all polygons as rooms at the very first, 
+   * instead of at each room, so we make the functions take the array
+   * of polygons and the index we're at in the array *)
   let poly_arr = file_to_polygons input_path |> list_to_array in
                   
   (* ***************************** GRAPHICS *****************************  *)
+  
   let get_abs (ox,oy) t_width (x,y) = 
     ox + t_width * x, oy + t_width * y
 
