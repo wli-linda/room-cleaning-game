@@ -67,7 +67,9 @@ type state = {
  dirty_tiles : int ref
 }
 
-
+(* A quicker way to check if a coor is a tile, given the state *)
+let is_a_tile state coor = 
+  HygieneTable.get state.table coor != None
 
 let initiate_state room =
   let num = get_tiles_num room in

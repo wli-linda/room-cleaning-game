@@ -2,7 +2,7 @@
 
 open Util
 open Rooms
-open Polygons;;
+open Polygons
 
 (* ========Point - Coordinate - Polygon - pos=======*)
 
@@ -207,7 +207,7 @@ let cleanable room coor =
 
 let cleanable_no_shift room relative_coor =
   let coor = coor_to_map_index room relative_coor in
-  cleanable room coor ;;
+  cleanable room coor 
 
 (*get the coordinates of all tiles*)
 let get_all_tiles room =
@@ -221,7 +221,7 @@ let get_all_tiles room =
       then tiles := (a, b) :: !tiles
     done;
   done;
-  !tiles ;;
+  !tiles 
 
 (* Same as get_all_tiles except for that no_shift returns the 
     relative coordinates (aka map index) of left bottom corners, not absolute 
@@ -237,12 +237,12 @@ let get_all_tiles_no_shift room =
       then tiles := (x,y) :: !tiles
     done;
   done;
-  !tiles ;;
+  !tiles 
 
 
 let get_tiles_num room =
   let tiles = get_all_tiles room in
-  List.length tiles ;;
+  List.length tiles 
 
 (* is a neighbor tile reachable from the current tile
 
@@ -270,8 +270,8 @@ let reachable room coor neighbor =
     end
   end
 
-(* **************** ZITING'S ADDITION **************** *)
-(* **************** Till here **************** *)
+
+
 
 (* ========Tests=======*)
 

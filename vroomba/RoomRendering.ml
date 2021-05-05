@@ -86,7 +86,7 @@ let render_games (input_path: string) (output_path : string) =
        open_graph @@ Printf.sprintf " %dx%d" (fst wrapper_dim) (snd wrapper_dim);
        let lbc_board = ((fst wrapper_dim - fst board_dim) / 2, 
                         (snd wrapper_dim - snd board_dim) / 2) in
-       set_color (rgb 255 255 204);
+       set_color (rgb 194 197 204);
        fill_rect (fst lbc_board) (snd lbc_board) (fst board_dim) (snd board_dim);
 
        let tile_width = (fst board_dim) / (Array.length r.map) in
@@ -147,7 +147,7 @@ let render_games (input_path: string) (output_path : string) =
            | 'd' -> Right
            | _ -> error "Unrecognizable move!" 
          in let next_coor = move_in_dir curr_coor m in
-         if not (exist_in_room r next_coor)
+         if not (is_a_tile state next_coor)
          then wait_until_q_pressed r curr_coor 
              state move_list lbc_board tile_width r_arr i
          else begin
@@ -162,7 +162,7 @@ let render_games (input_path: string) (output_path : string) =
            let neighbors = get_eight_neighbors next_coor in
            List.iter (fun n -> 
                let n_abs = get_abs_from_coor r lbc_board tile_width n in
-               if exist_in_room r n
+               if is_a_tile state n
                then 
                  (if reachable r next_coor n
                   then (clean_a_tile state n;
@@ -217,7 +217,7 @@ let render_games (input_path: string) (output_path : string) =
       let neighbors = get_eight_neighbors starting_coor in
       List.iter (fun n -> 
           let n_abs = get_abs_from_coor r lbc_board tile_width n in
-          if exist_in_room r n
+          if is_a_tile state n
           then 
             (if reachable r starting_coor n
              then clean_a_tile state n;
