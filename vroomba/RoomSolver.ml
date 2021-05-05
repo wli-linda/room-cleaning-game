@@ -42,10 +42,6 @@ open BinarySearchTree
 module CoorTable =
   ResizableListBasedHashTable(struct type t = (int * int) end)
 
-module ReachTable =
-  ResizableListBasedHashTable(struct type t = int end)
-
-type reached = White | Black
     
 (* This is a complex task. Feel free to introduce whatever functions
    and data types you consider necessary, and also rely on data
@@ -115,14 +111,12 @@ let create_graph r =
   let ls = movable_coords r in
   let ct = CoorTable.mk_new_table (List.length ls) in
   let bst = mk_tree () in
-  let rt = ReachTable.mk_new_table (List.length ls) in
   List.iter (fun coor ->
       CoorTable.insert ct coor !(g.next_node_id);
       let _ = BST.BinarySearchTree.insert bst !(g.next_node_id) in ();
-      ReachTable.insert rt coor White;
       add_node g coor) ls;
   List.iter (fun coor -> add_edges g ct coor) ls;
-  (g, ct, bst, rt)
+  (g, ct, bst)
 
 let clean state ct (bst : int BST.BinarySearchTree.tree)  curr =
   clean_a_tile state curr;
@@ -149,7 +143,7 @@ let clean state ct (bst : int BST.BinarySearchTree.tree)  curr =
 (* Solve the room and produce the list of moves. *)
 (* Make use of RoomChecker.state state type internally in your solver *)
 let solve_room (r: room) : move list =
-  let (g, ct, bst, rt) = create_graph r in
+  let (g, ct, bst) = create_graph r in
   let state = init_state r in
   clean state ct bst !(state.current);
   let ht = state.table in
@@ -189,7 +183,6 @@ let solve_room (r: room) : move list =
     then List.rev !moves
     else begin
       clean state ct bst (get_coor g id);
-      ReachTable.insert rt (get_coor g id) Black;
       let rec walk_succ_ls id_walk succ_ls ls_moved =
         if !(state.dirty_tiles) = 0
         then List.rev !moves
