@@ -85,7 +85,7 @@ let render_games (input_path: string) (output_path : string) =
        open_graph @@ Printf.sprintf " %dx%d" (fst wrapper_dim) (snd wrapper_dim);
        let lbc_board = ((fst wrapper_dim - fst board_dim) / 2, 
                         (snd wrapper_dim - snd board_dim) / 2) in
-       set_color (rgb 194 197 204);
+       set_color (rgb 255 255 255);
        fill_rect (fst lbc_board) (snd lbc_board) (fst board_dim) (snd board_dim);
 
        let tile_width = (fst board_dim) / (Array.length r.map) in
@@ -96,10 +96,10 @@ let render_games (input_path: string) (output_path : string) =
        (* Fill the room *)  
        let room_int_pairs_array_abs = get_edges_no_shift r |> list_to_array 
                                       |> Array.map (get_abs lbc_board tile_width) in
-       fill_poly_color ~color:(Graphics.yellow) room_int_pairs_array_abs
+       fill_poly_color ~color:(rgb 100 100 100) room_int_pairs_array_abs
 
   in let draw_clean tile_width (x,y) = 
-       set_color Graphics.blue;
+       set_color (rgb 209 237 242);
        fill_rect x y tile_width tile_width 
 
   in let display_vroomba tile_width (x,y) =

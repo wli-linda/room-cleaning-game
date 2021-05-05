@@ -106,7 +106,7 @@ let exist_in_room_no_shift room relative_coor =
 (* function takes coordiantes *)
 let exist_in_room room coor = 
   let relative_coor = coor_to_map_index room coor in
-  exist_in_room_no_shift room relative_coor ;;
+  exist_in_room_no_shift room relative_coor 
 
 let get_edges_no_shift room =
   let (shift_x, shift_y) = !(room.shift) in

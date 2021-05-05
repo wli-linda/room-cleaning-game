@@ -304,3 +304,8 @@ let%test "test_checker_rooms_negative" =
 let%test "test_checker_random_negative" = 
   let room = generate_random_room 100 in
   not (validate room "W")
+
+let%test "test_checker_invalid room" = 
+  let s = "(0, 0); (1, 0); (1, 1); (2, 1); (2, 2); (0, 2)" in
+  let room = string_to_polygon s |> get_exn |> polygon_to_room in
+  not (validate room "k")
