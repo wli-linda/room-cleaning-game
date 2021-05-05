@@ -158,13 +158,13 @@ in let clean_and_draw r state coor lbc_board tile_width =
              close_graph ();
              play p_arr (i + 1))
        else begin
-
-         (* Ask for user input *)
          let curr_coor = !(state.current) in
 
+         (* Ask for user input *)
          let event = wait_next_event [Key_pressed] in
          if event.key == 'q'
-         then (write_solution_to_file_appendable (List.rev move_list) output_path;
+         then (write_solution_to_file_appendable
+                 (List.rev move_list) output_path;
                close_graph ())
          else if List.mem event.key ['a'; 's'; 'd'; 'w']
          then begin
@@ -173,7 +173,7 @@ in let clean_and_draw r state coor lbc_board tile_width =
              | 'a' -> Left
              | 's' -> Down
              | 'd' -> Right
-             | _ -> error "Unrecognizable move!" 
+             | _ -> error "Unrecognizable move!" (* won't reach this step *)
            in let next_coor = move_in_dir curr_coor m in
            if not (is_a_tile state next_coor)
            then wait_until_q_pressed r state

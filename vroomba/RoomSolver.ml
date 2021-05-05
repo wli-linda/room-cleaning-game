@@ -31,6 +31,9 @@ open RoomUtil
 open BetterHashTable
 open Graphs
 open LinkedGraphs
+
+open BST
+open BinarySearchTree
     
 (*********************************************)
 (*              Room solver                  *)
@@ -105,7 +108,7 @@ let init_state r =
 let get_id ct coor = CoorTable.get ct coor
     
 let add_edges g ct coor =
-  let add_edge src dst_op =
+  let add_room_edge src dst_op =
     if dst_op != None
     then (let dst = get_exn dst_op in
           add_edge g src dst;
@@ -116,22 +119,24 @@ let add_edges g ct coor =
   let left = get_id ct (x - 1, y) in
   let down = get_id ct (x, y - 1) in
   let right = get_id ct (x + 1, y) in
-  add_edge id up;
-  add_edge id left;
-  add_edge id down;
-  add_edge id right
+  add_room_edge id up;
+  add_room_edge id left;
+  add_room_edge id down;
+  add_room_edge id right
     
 let create_graph r =
   let g = mk_graph () in
   let ls = movable_coords r in
   let ct = CoorTable.mk_new_table (List.length ls) in
+  let bst = mk_tree () in
   let rt = ReachTable.mk_new_table (List.length ls) in
   List.iter (fun coor ->
       CoorTable.insert ct coor !(g.next_node_id);
+      let _ = BST.BinarySearchTree.insert bst !(g.next_node_id) in ();
       ReachTable.insert rt coor White;
       add_node g coor) ls;
   List.iter (fun coor -> add_edges g ct coor) ls;
-  (g, ct, rt)
+  (g, ct, bst, rt)
 
 (*********************************************)
 (*              Actual solver                *)
@@ -140,16 +145,67 @@ let create_graph r =
 (* Solve the room and produce the list of moves. *)
 (* Make use of RoomChecker.state state type internally in your solver *)
 let solve_room (r: room) : move list =
-  let (g, ct, rt) = create_graph r in
+  let (g, ct, bst, rt) = create_graph r in
   let state = init_state r in
+  let ht = state.table in
   let moves = ref [] in
   let init_coor = get_exn @@ get_id ct !(state.current) in
   let get_coor g id = get_value @@ get_node g id in
 
+  let move_to_coor state moves curr next =
+    let loop state moves x_high y_high x_low y_low =
+      let i = ref 0 in
+      let j = ref 0 in
+      while !(state.dirty_tiles) > 0 ||
+            ((x_low + !i < x_high) || (y_low + !j < y_high)) do
+        if is_a_tile state (x_low + !i + 1, y_low + !j) ||
+           is_a_tile state (x_low + !i, y_low + !j + 1)
+        then (match Random.int 2 with
+            | 0 ->
+              if is_a_tile state (x_low + !i + 1, y_low + !j)
+              then (moves := RoomChecker.Right :: !moves; i := !i + 1;
+                    clean state (x_low + !i, y_low + !j))
+            | _ ->
+              if is_a_tile state (x_low + !i, y_low + !j + 1)
+              then (moves := Up :: !moves; j := !j + 1;
+                    clean state (x_low + !i, y_low + !j)))
+        else (match Random.int 2 with
+            | 0 ->
+              if is_a_tile state (x_low + !i - 1, y_low + !j)
+              then (moves := Left :: !moves; i := !i - 1;
+                    clean state (x_low + !i, y_low + !j))
+            | _ ->
+              if is_a_tile state (x_low + !i, y_low + !j - 1)
+              then (moves := Down :: !moves; j := !j - 1;
+                    clean state (x_low + !i, y_low + !j)))
+      done;
+    in
+    let (x1, y1) = curr in
+    let (x2, y2) = next in
+    if x2 <= x1 && y2 <= y1 then loop state moves x1 y1 x2 y2
+    else if x1 <= x2 && y1 <= y2 then loop state moves x2 y2 x1 y1
+    else if x2 <= x1 && y1 <= y2 then loop state moves x1 y2 x2 y1
+    else loop state moves x2 y1 x1 y2
+  in
+  
+  (* check if all succ nodes are cleaned *)
+  let rec check_hygiene ls =
+    match ls with
+    | [] -> None
+    | h :: tl ->
+      let coor = get_coor g h in
+      let is_cleaned = get_exn @@ HygieneTable.get ht coor in
+      if is_cleaned = Dirty
+      then Some h
+      else check_hygiene tl
+  in 
+  
   (* DFS & BACKTRACKING *)
   let rec dfs_visit id =
     clean state (get_coor g id);
     ReachTable.insert rt (get_coor g id) Black;
+    let node = get_exn @@ search bst id in
+    delete_node bst node;
     if !(state.dirty_tiles) = 0
     then List.rev !moves
     else begin
@@ -160,13 +216,25 @@ let solve_room (r: room) : move list =
         else begin
           let (x, y) = get_coor g id_walk in
           match succ_ls with
-          | [] ->
-            if !new_move = true
-            then (new_move := false; backtrack !moves id_walk)
-            else backtrack ls_moved id_walk
+          | [] -> 
+            let dirty = get_exn @@ get_root bst in
+            let dirty_coor = get_coor g dirty.value in
+            move_to_coor state moves (x, y) dirty_coor;
+            if !(state.dirty_tiles) = 0
+            then List.rev !moves
+            else dfs_visit dirty.value
           | h :: tl ->
             let coor = get_coor g h in
-            if get_exn @@ ReachTable.get rt coor = Black 
+            if (let succ_succ_ls =
+                  (let res = ref [] in
+                   List.iter (fun coor ->
+                       let id_op = get_id ct coor in
+                       if id_op != None
+                       then res := (get_exn id_op) :: !res
+                     ) (get_eight_neighbors coor);
+                   !res) in
+                let op = check_hygiene succ_succ_ls in
+                op = None)  
             then walk_succ_ls id_walk tl ls_moved 
             else begin
               new_move := true;
@@ -178,12 +246,13 @@ let solve_room (r: room) : move list =
               dfs_visit h
             end
         end
+        (*
       and backtrack ls_moved id_bk =
         if !(state.dirty_tiles) = 0
         then List.rev !moves
         else begin
           match ls_moved with
-          | [] -> List.rev !moves (* shouldn't reach *)
+          | [] -> List.rev !moves
           | h :: tl ->
             let (x, y) = get_coor g id_bk in
             let (coor', rev_move) = match h with
@@ -196,6 +265,7 @@ let solve_room (r: room) : move list =
             let succ_ls' = get_succ g id' in
             walk_succ_ls id' succ_ls' tl
         end
+*)
       in let succ_ls = get_succ g id in
       walk_succ_ls id succ_ls []
     end
