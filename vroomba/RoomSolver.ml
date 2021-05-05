@@ -81,29 +81,15 @@ let reachable' state coor neighbor =
     end
   end
   
-let clean state curr =
-  clean_a_tile state curr;
-  let neighbors = get_eight_neighbors curr in
-  let ht = state.table in
-  List.iter (fun coor ->
-      let op = HygieneTable.get ht coor in
-      if op != None
-      then (if reachable' state curr coor
-            then clean_a_tile state coor)
-    ) neighbors
-    
 let init_state r =
   let ls = movable_coords r in
   let num = List.length ls in
   let ht = HygieneTable.mk_new_table num in
   List.iter (fun coor -> HygieneTable.insert ht coor Dirty) ls;
   let start = (0, 0) in
-  let state = 
-    { current = ref start;
-      table = ht;
-      dirty_tiles = ref num } in
-  clean state start;
-  state
+  { current = ref start;
+    table = ht;
+    dirty_tiles = ref num }
 
 let get_id ct coor = CoorTable.get ct coor
     
@@ -138,6 +124,24 @@ let create_graph r =
   List.iter (fun coor -> add_edges g ct coor) ls;
   (g, ct, bst, rt)
 
+let clean state ct (bst : int BST.BinarySearchTree.tree)  curr =
+  clean_a_tile state curr;
+  let node_op = search bst (get_exn @@ get_id ct curr) in
+  if node_op != None
+  then delete_node bst (get_exn node_op);
+  let neighbors = get_eight_neighbors curr in
+  let ht = state.table in
+  List.iter (fun coor ->
+      let op = HygieneTable.get ht coor in
+      if op != None
+      then (if reachable' state curr coor
+            then (clean_a_tile state coor;
+                  let node_op = search bst (get_exn @@ get_id ct curr) in
+                  if node_op != None
+                  then delete_node bst (get_exn node_op)))
+    ) neighbors
+    
+
 (*********************************************)
 (*              Actual solver                *)
 (*********************************************)
@@ -147,45 +151,24 @@ let create_graph r =
 let solve_room (r: room) : move list =
   let (g, ct, bst, rt) = create_graph r in
   let state = init_state r in
+  clean state ct bst !(state.current);
   let ht = state.table in
   let moves = ref [] in
   let init_coor = get_exn @@ get_id ct !(state.current) in
   let get_coor g id = get_value @@ get_node g id in
 
-  let move_to_coor state moves curr next =
-    let loop state moves x_high y_high x_low y_low =
-      let i = ref 0 in
-      let j = ref 0 in
-      while !(state.dirty_tiles) > 0 ||
-            ((x_low + !i < x_high) || (y_low + !j < y_high)) do
-        if is_a_tile state (x_low + !i + 1, y_low + !j) ||
-           is_a_tile state (x_low + !i, y_low + !j + 1)
-        then (match Random.int 2 with
-            | 0 ->
-              if is_a_tile state (x_low + !i + 1, y_low + !j)
-              then (moves := RoomChecker.Right :: !moves; i := !i + 1;
-                    clean state (x_low + !i, y_low + !j))
-            | _ ->
-              if is_a_tile state (x_low + !i, y_low + !j + 1)
-              then (moves := Up :: !moves; j := !j + 1;
-                    clean state (x_low + !i, y_low + !j)))
-        else (match Random.int 2 with
-            | 0 ->
-              if is_a_tile state (x_low + !i - 1, y_low + !j)
-              then (moves := Left :: !moves; i := !i - 1;
-                    clean state (x_low + !i, y_low + !j))
-            | _ ->
-              if is_a_tile state (x_low + !i, y_low + !j - 1)
-              then (moves := Down :: !moves; j := !j - 1;
-                    clean state (x_low + !i, y_low + !j)))
-      done;
-    in
-    let (x1, y1) = curr in
-    let (x2, y2) = next in
-    if x2 <= x1 && y2 <= y1 then loop state moves x1 y1 x2 y2
-    else if x1 <= x2 && y1 <= y2 then loop state moves x2 y2 x1 y1
-    else if x2 <= x1 && y1 <= y2 then loop state moves x1 y2 x2 y1
-    else loop state moves x2 y1 x1 y2
+  (* move to next dirty coordinate on bst with djikstra shortest path *)
+  let move_to_coor g state moves src dst =
+    (get_exn @@ Paths.get_shortest_path
+       (Paths.dijkstra g src |> fst) src dst) |>
+    List.iter (fun (src, dst) ->
+        let (x, y) = get_coor g src in
+        let (x', y') = get_coor g dst in
+        if x = x' && y + 1 = y' then moves := RoomChecker.Up :: !moves
+        else if x - 1 = x' && y = y' then moves := Left :: !moves
+        else if x = x' && y - 1 = y' then moves := Down :: !moves
+        else if x + 1 = x' && y = y' then moves := Right :: !moves;
+        clean state ct bst (x', y'))
   in
   
   (* check if all succ nodes are cleaned *)
@@ -202,14 +185,11 @@ let solve_room (r: room) : move list =
   
   (* DFS & BACKTRACKING *)
   let rec dfs_visit id =
-    clean state (get_coor g id);
-    ReachTable.insert rt (get_coor g id) Black;
-    let node = get_exn @@ search bst id in
-    delete_node bst node;
     if !(state.dirty_tiles) = 0
     then List.rev !moves
     else begin
-      let new_move = ref true in
+      clean state ct bst (get_coor g id);
+      ReachTable.insert rt (get_coor g id) Black;
       let rec walk_succ_ls id_walk succ_ls ls_moved =
         if !(state.dirty_tiles) = 0
         then List.rev !moves
@@ -218,8 +198,7 @@ let solve_room (r: room) : move list =
           match succ_ls with
           | [] -> 
             let dirty = get_exn @@ get_root bst in
-            let dirty_coor = get_coor g dirty.value in
-            move_to_coor state moves (x, y) dirty_coor;
+            move_to_coor g state moves id_walk dirty.value;
             if !(state.dirty_tiles) = 0
             then List.rev !moves
             else dfs_visit dirty.value
@@ -237,7 +216,6 @@ let solve_room (r: room) : move list =
                 op = None)  
             then walk_succ_ls id_walk tl ls_moved 
             else begin
-              new_move := true;
               let (x', y') = coor in
               if x = x' && y + 1 = y' then moves := RoomChecker.Up :: !moves
               else if x - 1 = x' && y = y' then moves := Left :: !moves
@@ -246,26 +224,6 @@ let solve_room (r: room) : move list =
               dfs_visit h
             end
         end
-        (*
-      and backtrack ls_moved id_bk =
-        if !(state.dirty_tiles) = 0
-        then List.rev !moves
-        else begin
-          match ls_moved with
-          | [] -> List.rev !moves
-          | h :: tl ->
-            let (x, y) = get_coor g id_bk in
-            let (coor', rev_move) = match h with
-              | RoomChecker.Up -> ((x, y - 1), RoomChecker.Down)
-              | Left -> ((x + 1, y), Right)
-              | Down -> ((x, y + 1), Up)
-              | Right -> ((x - 1, y), Left) in
-            moves := rev_move :: !moves;
-            let id' = get_exn @@ get_id ct coor' in
-            let succ_ls' = get_succ g id' in
-            walk_succ_ls id' succ_ls' tl
-        end
-*)
       in let succ_ls = get_succ g id in
       walk_succ_ls id succ_ls []
     end
