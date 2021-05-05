@@ -49,12 +49,11 @@ let () =
     let command = Sys.argv.(1) in
     if command = "play"  
     then
-      (* TODO: Implement exception handling if there is no such file *)
       let input_file = Sys.argv.(2) in
       let output_file = Sys.argv.(3) in
       try (render_games input_file output_file)
       with Failure _ ->
-        printf "No such input file exists, or you've made an invalid move! \n"
+        printf "No such input file exists! \n"
     else begin  
       if command = "generate"
       then
