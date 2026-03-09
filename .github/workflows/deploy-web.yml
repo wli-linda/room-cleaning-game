@@ -1,0 +1,58 @@
+name: Deploy Vroomba Web to GitHub Pages
+
+on:
+  push:
+    branches: ["web-ui"]
+    paths:
+      - "web/**"
+      - ".github/workflows/deploy-web.yml"
+      - "*.opam"
+      - "dune-project"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: "5.1.1"
+
+      - name: Install toolchain
+        run: |
+          opam install -y dune js_of_ocaml js_of_ocaml-ppx
+
+      - name: Build JS bundle
+        run: |
+          eval $(opam env)
+          dune build web/vroomba_web.bc.js
+          cp _build/default/web/vroomba_web.bc.js web/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

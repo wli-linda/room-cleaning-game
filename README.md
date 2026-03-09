@@ -185,6 +185,20 @@ Notes:
 * The web demo expects room polygons in the same text style as `resources/*.txt`.
 * You can paste multiple rooms (one per line) and step through them with **Next room**.
 
+### Deploying the web demo with GitHub Pages
+
+This branch includes a workflow at `.github/workflows/deploy-web.yml` that builds
+`web/vroomba_web.bc.js` and publishes the `web/` folder to GitHub Pages.
+
+1. Push this branch as `web-ui` (or change the workflow branch trigger to your preferred branch).
+2. In GitHub, open **Settings → Pages** and set **Source** to **GitHub Actions**.
+3. Trigger the workflow by pushing changes under `web/` (or run it manually via **Actions**).
+4. After the deploy job succeeds, your site will be available at:
+   `https://<your-org-or-user>.github.io/<repo-name>/`
+
+Because `web/index.html` references `vroomba_web.bc.js` with a relative path,
+it works correctly under the repository subpath used by GitHub Pages.
+
 ### Workload split
 
 This is a complex project and the good separation of tasks is a key to
