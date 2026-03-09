@@ -161,6 +161,30 @@ engine and create a separate branch (for example, `web-ui`) with these adjustmen
 
 This split lets you deliver a browser game without destabilizing the command-line toolchain.
 
+### Implemented web demo in this branch
+
+This branch now includes a minimal browser-playable build under `web/` using
+`js_of_ocaml`:
+
+* `web/vroomba_web.ml` — browser game loop (room parsing, movement, cleaning state, canvas rendering).
+* `web/dune` — js_of_ocaml target producing `vroomba_web.bc.js`.
+* `web/index.html` + `web/style.css` — standalone page and UI.
+
+Build and run locally:
+
+```bash
+dune build web/vroomba_web.bc.js
+cp _build/default/web/vroomba_web.bc.js web/
+python3 -m http.server 8000
+# open http://localhost:8000/web/
+```
+
+Notes:
+
+* This web layer keeps CLI tools untouched.
+* The web demo expects room polygons in the same text style as `resources/*.txt`.
+* You can paste multiple rooms (one per line) and step through them with **Next room**.
+
 ### Workload split
 
 This is a complex project and the good separation of tasks is a key to

@@ -1,0 +1,4 @@
+(executable
+ (name vroomba_web)
+ (modes js)
+ (libraries js_of_ocaml js_of_ocaml-ppx))

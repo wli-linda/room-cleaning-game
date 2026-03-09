@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vroomba Web Demo</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Vroomba (js_of_ocaml web demo)</h1>
+      <p>Controls: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> to move.</p>
+      <div class="controls">
+        <label>Room polygon
+          <textarea id="room-input" rows="3"></textarea>
+        </label>
+        <div class="buttons">
+          <button id="load-room">Load room</button>
+          <button id="reset-room">Reset</button>
+          <label>Tile size <input id="scale" type="number" value="24" min="8" max="64"/></label>
+        </div>
+        <label>Room queue (one polygon per line)
+          <textarea id="rooms-input" rows="5" placeholder="Paste lines from resources/rooms.txt"></textarea>
+        </label>
+        <div class="buttons">
+          <button id="load-rooms">Load queue</button>
+          <button id="next-room">Next room</button>
+          <span id="room-index">0 / 0</span>
+        </div>
+      </div>
+      <p id="status"></p>
+      <canvas id="board" width="600" height="400"></canvas>
+      <p>Moves: <code id="moves"></code></p>
+    </main>
+    <script src="vroomba_web.bc.js"></script>
+  </body>
+</html>
