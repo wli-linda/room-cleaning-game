@@ -133,6 +133,34 @@ properties of our room representations.
 
 ## Tips and Hints
 
+## Running Vroomba in a browser (suggested separate branch)
+
+Yes — but with one important caveat: the current interactive mode (`play`/`render`)
+uses OCaml's native `Graphics` library, which is desktop/X11-oriented and not directly
+embeddable into a browser page.
+
+A practical way to ship a web-playable version is to keep this repository as the core
+engine and create a separate branch (for example, `web-ui`) with these adjustments:
+
+1. **Keep logic, replace rendering/input layer**
+   * Reuse `Rooms`, `RoomChecker`, and `RoomGenerator` logic as much as possible.
+   * Replace `RoomRendering.ml` (Graphics API calls) with a browser frontend
+     (HTML canvas + keyboard listeners).
+
+2. **Compile OCaml logic to JavaScript**
+   * Use `js_of_ocaml` in a dedicated dune target for browser-compatible modules.
+   * Expose a tiny API (e.g., parse room, apply move, query state) from OCaml to JS.
+
+3. **Embed as a normal web app**
+   * Add a small `index.html` that loads the generated JS bundle.
+   * Draw tiles/robot/cleaned cells in `<canvas>` and map `W/A/S/D` keys to moves.
+
+4. **Keep CLI mode intact**
+   * Preserve the current native runner in `main` for grading/automation.
+   * Iterate on browser UX independently in the `web-ui` branch.
+
+This split lets you deliver a browser game without destabilizing the command-line toolchain.
+
 ### Workload split
 
 This is a complex project and the good separation of tasks is a key to
