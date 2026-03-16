@@ -190,10 +190,11 @@ Notes:
 This branch includes a workflow at `.github/workflows/deploy-web.yml` that builds
 `web/vroomba_web.bc.js` and publishes the `web/` folder to GitHub Pages.
 
-1. Push this branch as `web-ui` (or change the workflow branch trigger to your preferred branch).
+1. Push changes to one of the workflow branches (currently `codex/add-web-page-embedding-for-game`, `web-ui`, or `main`).
 2. In GitHub, open **Settings → Pages** and set **Source** to **GitHub Actions**.
-3. Trigger the workflow by pushing changes under `web/` (or run it manually via **Actions**).
-4. After the deploy job succeeds, your site will be available at:
+3. If you only see folder choices like `/root` and `/docs`, you are still in **Deploy from a branch** mode; switch the **Source** dropdown to **GitHub Actions** instead.
+4. Trigger the workflow by pushing changes under `web/` (or run it manually via **Actions**).
+5. After the deploy job succeeds, your site will be available at:
    `https://<your-org-or-user>.github.io/<repo-name>/`
 
 Because `web/index.html` references `vroomba_web.bc.js` with a relative path,

@@ -2,7 +2,7 @@ name: Deploy Vroomba Web to GitHub Pages
 
 on:
   push:
-    branches: ["web-ui"]
+    branches: ["codex/add-web-page-embedding-for-game", "web-ui", "main"]
     paths:
       - "web/**"
       - ".github/workflows/deploy-web.yml"
