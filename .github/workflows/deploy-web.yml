@@ -38,7 +38,7 @@ jobs:
       - name: Build JS bundle
         run: |
           eval $(opam env)
-          dune build web/vroomba_web.bc.js
+          dune build --root . web/vroomba_web.bc.js
           cp _build/default/web/vroomba_web.bc.js web/
 
       - name: Upload Pages artifact
