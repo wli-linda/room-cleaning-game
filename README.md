@@ -133,6 +133,73 @@ properties of our room representations.
 
 ## Tips and Hints
 
+## Running Vroomba in a browser (suggested separate branch)
+
+Yes — but with one important caveat: the current interactive mode (`play`/`render`)
+uses OCaml's native `Graphics` library, which is desktop/X11-oriented and not directly
+embeddable into a browser page.
+
+A practical way to ship a web-playable version is to keep this repository as the core
+engine and create a separate branch (for example, `web-ui`) with these adjustments:
+
+1. **Keep logic, replace rendering/input layer**
+   * Reuse `Rooms`, `RoomChecker`, and `RoomGenerator` logic as much as possible.
+   * Replace `RoomRendering.ml` (Graphics API calls) with a browser frontend
+     (HTML canvas + keyboard listeners).
+
+2. **Compile OCaml logic to JavaScript**
+   * Use `js_of_ocaml` in a dedicated dune target for browser-compatible modules.
+   * Expose a tiny API (e.g., parse room, apply move, query state) from OCaml to JS.
+
+3. **Embed as a normal web app**
+   * Add a small `index.html` that loads the generated JS bundle.
+   * Draw tiles/robot/cleaned cells in `<canvas>` and map `W/A/S/D` keys to moves.
+
+4. **Keep CLI mode intact**
+   * Preserve the current native runner in `main` for grading/automation.
+   * Iterate on browser UX independently in the `web-ui` branch.
+
+This split lets you deliver a browser game without destabilizing the command-line toolchain.
+
+### Implemented web demo in this branch
+
+This branch now includes a minimal browser-playable build under `web/` using
+`js_of_ocaml`:
+
+* `web/vroomba_web.ml` — browser game loop (room parsing, movement, cleaning state, canvas rendering).
+* `web/dune` — js_of_ocaml target producing `vroomba_web.bc.js`.
+* `web/index.html` + `web/style.css` — standalone page and UI.
+
+Build and run locally:
+
+```bash
+dune build web/vroomba_web.bc.js
+cp _build/default/web/vroomba_web.bc.js web/
+python3 -m http.server 8000
+# open http://localhost:8000/web/
+```
+
+Notes:
+
+* This web layer keeps CLI tools untouched.
+* The web demo expects room polygons in the same text style as `resources/*.txt`.
+* You can paste multiple rooms (one per line) and step through them with **Next room**.
+
+### Deploying the web demo with GitHub Pages
+
+This branch includes a workflow at `.github/workflows/deploy-web.yml` that builds
+`web/vroomba_web.bc.js` and publishes the `web/` folder to GitHub Pages.
+
+1. Push changes to one of the workflow branches (currently `codex/add-web-page-embedding-for-game`, `web-ui`, or `main`).
+2. In GitHub, open **Settings → Pages** and set **Source** to **GitHub Actions**.
+3. If you only see folder choices like `/root` and `/docs`, you are still in **Deploy from a branch** mode; switch the **Source** dropdown to **GitHub Actions** instead.
+4. Trigger the workflow by pushing changes under `web/` (or run it manually via **Actions**).
+5. After the deploy job succeeds, your site will be available at:
+   `https://<your-org-or-user>.github.io/<repo-name>/`
+
+Because `web/index.html` references `vroomba_web.bc.js` with a relative path,
+it works correctly under the repository subpath used by GitHub Pages.
+
 ### Workload split
 
 This is a complex project and the good separation of tasks is a key to
